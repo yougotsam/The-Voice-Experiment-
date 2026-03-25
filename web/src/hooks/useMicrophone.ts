@@ -40,7 +40,10 @@ export function useMicrophone(onAudioChunk: (pcm16: ArrayBuffer) => void) {
     };
 
     source.connect(worklet);
-    worklet.connect(context.destination);
+    const silencer = context.createGain();
+    silencer.gain.value = 0;
+    worklet.connect(silencer);
+    silencer.connect(context.destination);
 
     contextRef.current = context;
     streamRef.current = stream;
