@@ -23,6 +23,14 @@ router = APIRouter()
 def _create_tts():
     provider = settings.tts_provider
 
+    if provider == "groq":
+        from server.tts.groq import GroqTTS
+        return GroqTTS(settings.llm_api_key, settings.groq_tts_voice, settings.groq_tts_model)
+
+    if provider == "dia2":
+        from server.tts.dia2 import Dia2TTS
+        return Dia2TTS()
+
     if provider == "csm":
         from server.tts.csm import CSMTTS
         return CSMTTS()
