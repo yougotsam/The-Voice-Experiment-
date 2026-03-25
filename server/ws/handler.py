@@ -20,26 +20,35 @@ logger = logging.getLogger(__name__)
 router = APIRouter()
 
 
-def _create_tts():
-    provider = settings.tts_provider
-
+def _create_single_tts(provider: str):
     if provider == "groq":
         from server.tts.groq import GroqTTS
         return GroqTTS(settings.llm_api_key, settings.groq_tts_voice, settings.groq_tts_model)
-
     if provider == "dia2":
         from server.tts.dia2 import Dia2TTS
         return Dia2TTS()
-
     if provider == "csm":
         from server.tts.csm import CSMTTS
         return CSMTTS()
-
     if provider == "piper":
         from server.tts.piper import PiperTTS
         return PiperTTS()
-
     return ElevenLabsTTS(settings.elevenlabs_api_key, settings.elevenlabs_voice_id)
+
+
+def _create_tts():
+    provider = settings.tts_provider
+
+    if provider == "fallback":
+        from server.tts.fallback import FallbackTTS
+        chain = []
+        for name in settings.tts_fallback_chain.split(","):
+            name = name.strip()
+            if name:
+                chain.append(_create_single_tts(name))
+        return FallbackTTS(chain) if chain else _create_single_tts("elevenlabs")
+
+    return _create_single_tts(provider)
 
 
 @router.websocket("/ws")
@@ -78,6 +87,12 @@ async def websocket_endpoint(ws: WebSocket) -> None:
                     await orchestrator.start_listening()
                 elif msg_type == ClientMessageType.STOP:
                     await orchestrator.stop_listening()
+                elif msg_type == ClientMessageType.INTERRUPT:
+                    await orchestrator.interrupt()
+                elif msg_type == ClientMessageType.CONFIG:
+                    system_prompt = msg.get("system_prompt")
+                    if system_prompt:
+                        session.set_persona(system_prompt)
 
     except WebSocketDisconnect:
         logger.info("WS disconnected: %s", session_id)

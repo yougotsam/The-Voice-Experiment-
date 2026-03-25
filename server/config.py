@@ -11,6 +11,7 @@ class Settings(BaseSettings):
     groq_tts_voice: str = "Arista-PlayAI"
     groq_tts_model: str = "playai-tts"
     tts_provider: str = "elevenlabs"
+    tts_fallback_chain: str = "groq,elevenlabs,piper"
     host: str = "0.0.0.0"
     port: int = 8000
     cors_origins: str = "http://localhost:3000"

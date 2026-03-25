@@ -1,6 +1,7 @@
 import asyncio
 import logging
 import re
+import time
 from typing import Any, Callable, Awaitable
 
 from server.stt.base import STTProvider
@@ -47,6 +48,17 @@ class Orchestrator:
         self._session.is_active = False
         await self._stt.stop()
 
+    async def interrupt(self) -> None:
+        if self._response_task and not self._response_task.done():
+            self._response_task.cancel()
+            try:
+                await self._response_task
+            except asyncio.CancelledError:
+                pass
+            self._response_task = None
+        await self._send_json("agent.audio.end", {})
+        await self._send_status("idle")
+
     async def feed_audio(self, audio: bytes) -> None:
         await self._stt.send_audio(audio)
 
@@ -60,6 +72,8 @@ class Orchestrator:
     async def _safe_process_response(self, text: str) -> None:
         try:
             await self._process_response(text)
+        except asyncio.CancelledError:
+            logger.info("Response cancelled (interrupted)")
         except Exception:
             logger.exception("Response pipeline failed")
             await self._send_json("error", {"text": "An error occurred while generating a response."})
@@ -67,13 +81,26 @@ class Orchestrator:
 
     async def _process_response(self, user_text: str) -> None:
         async with self._processing_lock:
+            t_start = time.perf_counter()
+            llm_ttfb = 0.0
+            tts_ttfb = 0.0
+
             await self._send_status("processing")
             self._session.add_user_message(user_text)
 
             full_response = ""
             buffer = ""
+            first_llm_token = True
+            first_tts_chunk = True
 
-            async for token in self._llm.stream_chat(self._session.get_messages()):
+            async for token in self._llm.stream_chat(
+                self._session.get_messages(),
+                system_prompt=self._session.system_prompt,
+            ):
+                if first_llm_token:
+                    llm_ttfb = time.perf_counter() - t_start
+                    first_llm_token = False
+
                 full_response += token
                 buffer += token
 
@@ -83,14 +110,29 @@ class Orchestrator:
                         sentence = sentence.strip()
                         if sentence:
                             await self._send_json("agent.text", {"text": sentence})
+                            t_before_tts = time.perf_counter()
                             await self._synthesize_and_send(sentence)
+                            if first_tts_chunk:
+                                tts_ttfb = time.perf_counter() - t_before_tts
+                                first_tts_chunk = False
                     buffer = sentences[-1]
 
             if buffer.strip():
                 await self._send_json("agent.text", {"text": buffer.strip()})
+                t_before_tts = time.perf_counter()
                 await self._synthesize_and_send(buffer.strip())
+                if first_tts_chunk:
+                    tts_ttfb = time.perf_counter() - t_before_tts
+                    first_tts_chunk = False
 
             self._session.add_assistant_message(full_response)
+
+            total = time.perf_counter() - t_start
+            await self._send_json("metrics", {
+                "llm_ttfb_ms": round(llm_ttfb * 1000),
+                "tts_ttfb_ms": round(tts_ttfb * 1000),
+                "total_ms": round(total * 1000),
+            })
             await self._send_status("idle")
 
     async def _synthesize_and_send(self, text: str) -> None:
@@ -101,6 +143,8 @@ class Orchestrator:
                     await self._send_json("agent.audio.start", {"sample_rate": self._tts.sample_rate})
                     started = True
                 await self._send_audio(audio_chunk)
+        except asyncio.CancelledError:
+            raise
         except Exception:
             logger.exception("TTS synthesis failed for: %s", text[:50])
         finally:
@@ -108,5 +152,11 @@ class Orchestrator:
                 await self._send_json("agent.audio.end", {})
 
     async def shutdown(self) -> None:
+        if self._response_task and not self._response_task.done():
+            self._response_task.cancel()
+            try:
+                await self._response_task
+            except asyncio.CancelledError:
+                pass
         await self._stt.stop()
         await self._tts.close()

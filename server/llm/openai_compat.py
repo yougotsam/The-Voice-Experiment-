@@ -7,12 +7,6 @@ from server.llm.base import LLMProvider
 
 logger = logging.getLogger(__name__)
 
-SYSTEM_PROMPT = (
-    "You are a helpful voice assistant. Keep responses concise and conversational. "
-    "Respond in 1-3 sentences unless the user asks for more detail. "
-    "Do not use markdown, bullet points, or formatting -- your response will be spoken aloud."
-)
-
 
 class OpenAICompatLLM(LLMProvider):
     def __init__(self, api_key: str, base_url: str, model: str):
@@ -22,8 +16,12 @@ class OpenAICompatLLM(LLMProvider):
     async def stream_chat(
         self,
         messages: list[dict[str, str]],
+        system_prompt: str = "",
     ) -> AsyncIterator[str]:
-        full_messages = [{"role": "system", "content": SYSTEM_PROMPT}, *messages]
+        full_messages = []
+        if system_prompt:
+            full_messages.append({"role": "system", "content": system_prompt})
+        full_messages.extend(messages)
         stream = await self._client.chat.completions.create(
             model=self._model,
             messages=full_messages,

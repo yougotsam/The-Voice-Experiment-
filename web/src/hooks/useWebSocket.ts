@@ -7,6 +7,9 @@ export type ServerMessage = {
   text?: string;
   status?: string;
   sample_rate?: number;
+  llm_ttfb_ms?: number;
+  tts_ttfb_ms?: number;
+  total_ms?: number;
 };
 
 type UseWebSocketOptions = {
