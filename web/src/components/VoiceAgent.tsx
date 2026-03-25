@@ -163,17 +163,19 @@ export function VoiceAgent() {
 
   useVAD({
     enabled: inputMode === "vad" && connected,
-    onSpeechStart: () => {
+    onSpeechStart: async () => {
       if (stateRef.current === "speaking" || stateRef.current === "processing") {
         doInterrupt();
       }
       agentTextBuffer.current = "";
+      await startMic();
       sendJSON({ type: "start" });
       setState("listening");
       stateRef.current = "listening";
     },
     onSpeechEnd: () => {
       if (stateRef.current === "listening") {
+        stopMic();
         sendJSON({ type: "stop" });
         setState("processing");
         stateRef.current = "processing";

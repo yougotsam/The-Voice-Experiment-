@@ -23,13 +23,18 @@ class FallbackTTS(TTSProvider):
 
     async def synthesize(self, text: str) -> AsyncIterator[bytes]:
         for i, provider in enumerate(self._providers):
+            started = False
             try:
                 async for chunk in provider.synthesize(text):
+                    started = True
                     self._active_index = i
                     yield chunk
                 return
             except Exception:
                 name = type(provider).__name__
+                if started:
+                    logger.error("TTS provider %s failed mid-stream, cannot retry", name)
+                    raise
                 logger.warning("TTS provider %s failed, trying next", name)
                 continue
         raise RuntimeError("All TTS providers failed")
