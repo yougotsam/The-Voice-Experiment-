@@ -94,14 +94,18 @@ class Orchestrator:
             await self._send_status("idle")
 
     async def _synthesize_and_send(self, text: str) -> None:
-        await self._send_json("agent.audio.start", {"sample_rate": self._tts.sample_rate})
+        started = False
         try:
             async for audio_chunk in self._tts.synthesize(text):
+                if not started:
+                    await self._send_json("agent.audio.start", {"sample_rate": self._tts.sample_rate})
+                    started = True
                 await self._send_audio(audio_chunk)
         except Exception:
             logger.exception("TTS synthesis failed for: %s", text[:50])
         finally:
-            await self._send_json("agent.audio.end", {})
+            if started:
+                await self._send_json("agent.audio.end", {})
 
     async def shutdown(self) -> None:
         await self._stt.stop()
