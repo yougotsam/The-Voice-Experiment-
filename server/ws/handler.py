@@ -21,20 +21,15 @@ router = APIRouter()
 
 
 def _create_tts():
-    if settings.tts_provider == "elevenlabs":
-        return ElevenLabsTTS(settings.elevenlabs_api_key, settings.elevenlabs_voice_id)
+    provider = settings.tts_provider
 
-    try:
+    if provider == "csm":
         from server.tts.csm import CSMTTS
         return CSMTTS()
-    except ImportError:
-        pass
 
-    try:
+    if provider == "piper":
         from server.tts.piper import PiperTTS
         return PiperTTS()
-    except ImportError:
-        pass
 
     return ElevenLabsTTS(settings.elevenlabs_api_key, settings.elevenlabs_voice_id)
 
@@ -50,8 +45,8 @@ async def websocket_endpoint(ws: WebSocket) -> None:
     llm = OpenAICompatLLM(settings.llm_api_key, settings.llm_base_url, settings.llm_model)
     tts = _create_tts()
 
-    async def send_text(msg_type: str, text: str) -> None:
-        await ws.send_text(encode_message(ServerMessageType(msg_type), {"text": text}))
+    async def send_json(msg_type: str, data: dict) -> None:
+        await ws.send_text(encode_message(ServerMessageType(msg_type), data))
 
     async def send_audio(audio: bytes) -> None:
         await ws.send_bytes(audio)
@@ -59,7 +54,7 @@ async def websocket_endpoint(ws: WebSocket) -> None:
     async def send_status(status: str) -> None:
         await ws.send_text(encode_message(ServerMessageType.STATUS, {"status": status}))
 
-    orchestrator = Orchestrator(stt, llm, tts, session, send_text, send_audio, send_status)
+    orchestrator = Orchestrator(stt, llm, tts, session, send_json, send_audio, send_status)
 
     try:
         while True:

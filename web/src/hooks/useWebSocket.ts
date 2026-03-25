@@ -6,6 +6,7 @@ export type ServerMessage = {
   type: string;
   text?: string;
   status?: string;
+  sample_rate?: number;
 };
 
 type UseWebSocketOptions = {
@@ -27,6 +28,15 @@ export function useWebSocket({
   const [connected, setConnected] = useState(false);
   const reconnectTimer = useRef<ReturnType<typeof setTimeout> | undefined>(undefined);
 
+  const onMessageRef = useRef(onMessage);
+  const onBinaryRef = useRef(onBinary);
+  const onOpenRef = useRef(onOpen);
+  const onCloseRef = useRef(onClose);
+  onMessageRef.current = onMessage;
+  onBinaryRef.current = onBinary;
+  onOpenRef.current = onOpen;
+  onCloseRef.current = onClose;
+
   const connect = useCallback(() => {
     if (wsRef.current?.readyState === WebSocket.OPEN) return;
 
@@ -35,16 +45,16 @@ export function useWebSocket({
 
     ws.onopen = () => {
       setConnected(true);
-      onOpen?.();
+      onOpenRef.current?.();
     };
 
     ws.onmessage = (event) => {
       if (event.data instanceof ArrayBuffer) {
-        onBinary?.(event.data);
+        onBinaryRef.current?.(event.data);
       } else {
         try {
           const msg: ServerMessage = JSON.parse(event.data);
-          onMessage?.(msg);
+          onMessageRef.current?.(msg);
         } catch {
           // ignore malformed messages
         }
@@ -53,7 +63,7 @@ export function useWebSocket({
 
     ws.onclose = () => {
       setConnected(false);
-      onClose?.();
+      onCloseRef.current?.();
       reconnectTimer.current = setTimeout(connect, 2000);
     };
 
@@ -62,7 +72,7 @@ export function useWebSocket({
     };
 
     wsRef.current = ws;
-  }, [url, onMessage, onBinary, onOpen, onClose]);
+  }, [url]);
 
   useEffect(() => {
     connect();
@@ -70,8 +80,7 @@ export function useWebSocket({
       clearTimeout(reconnectTimer.current);
       wsRef.current?.close();
     };
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
+  }, [connect]);
 
   const sendJSON = useCallback((data: Record<string, unknown>) => {
     if (wsRef.current?.readyState === WebSocket.OPEN) {

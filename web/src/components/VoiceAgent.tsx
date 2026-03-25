@@ -17,7 +17,7 @@ export function VoiceAgent() {
   const [connected, setConnected] = useState(false);
   const agentTextBuffer = useRef("");
 
-  const { enqueue: enqueueAudio, stop: stopPlayback } = useAudioPlayback();
+  const { enqueue: enqueueAudio, stop: stopPlayback, setSampleRate } = useAudioPlayback();
 
   const handleMessage = useCallback(
     (msg: ServerMessage) => {
@@ -58,6 +58,7 @@ export function VoiceAgent() {
           break;
 
         case "agent.audio.start":
+          if (msg.sample_rate) setSampleRate(msg.sample_rate);
           setState("speaking");
           break;
 
@@ -85,10 +86,10 @@ export function VoiceAgent() {
 
   const handleBinary = useCallback(
     (data: ArrayBuffer) => {
-      if (state !== "speaking") setState("speaking");
+      setState("speaking");
       enqueueAudio(data);
     },
-    [enqueueAudio, state],
+    [enqueueAudio],
   );
 
   const { connected: wsConnected, sendJSON, sendBinary } = useWebSocket({

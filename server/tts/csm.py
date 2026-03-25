@@ -53,7 +53,7 @@ class CSMTTS(TTSProvider):
         self._max_context = 4
 
     async def synthesize(self, text: str) -> AsyncIterator[bytes]:
-        loop = asyncio.get_event_loop()
+        loop = asyncio.get_running_loop()
         audio_bytes = await loop.run_in_executor(None, self._generate_sync, text)
         yield audio_bytes
 

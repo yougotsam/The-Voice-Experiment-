@@ -21,11 +21,11 @@ class PiperTTS(TTSProvider):
         data_dir = ensure_voice_exists(model, get_voices())
         model_path, config_path = find_voice(model, [data_dir])
         self._voice = PiperVoice.load(str(model_path), config_path=str(config_path))
-        self._sample_rate = self._voice.config.sample_rate
-        logger.info("Piper TTS loaded: %s (sample_rate=%d)", model, self._sample_rate)
+        self.sample_rate = self._voice.config.sample_rate
+        logger.info("Piper TTS loaded: %s (sample_rate=%d)", model, self.sample_rate)
 
     async def synthesize(self, text: str) -> AsyncIterator[bytes]:
-        loop = asyncio.get_event_loop()
+        loop = asyncio.get_running_loop()
         audio = await loop.run_in_executor(None, self._generate_sync, text)
         yield audio
 
