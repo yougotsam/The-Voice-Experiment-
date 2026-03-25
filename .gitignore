@@ -44,3 +44,8 @@ context_audio.wav
 # Model files
 *.pt
 *.ckpt
+
+# Node
+node_modules/
+.next/
+next-env.d.ts

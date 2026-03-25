@@ -1,0 +1,50 @@
+import asyncio
+import json
+import logging
+from typing import AsyncIterator
+
+import websockets
+from websockets.asyncio.client import ClientConnection
+
+from server.tts.base import TTSProvider
+
+logger = logging.getLogger(__name__)
+
+ELEVENLABS_WS_URL = "wss://api.elevenlabs.io/v1/text-to-speech/{voice_id}/stream-input"
+
+
+class ElevenLabsTTS(TTSProvider):
+    def __init__(self, api_key: str, voice_id: str):
+        self._api_key = api_key
+        self._voice_id = voice_id
+
+    async def synthesize(self, text: str) -> AsyncIterator[bytes]:
+        url = ELEVENLABS_WS_URL.format(voice_id=self._voice_id)
+        params = (
+            f"?model_id=eleven_turbo_v2_5"
+            f"&output_format=pcm_24000"
+        )
+        headers = {"xi-api-key": self._api_key}
+
+        async with websockets.connect(url + params, additional_headers=headers) as ws:
+            bos = {
+                "text": " ",
+                "voice_settings": {
+                    "stability": 0.5,
+                    "similarity_boost": 0.75,
+                },
+                "generation_config": {"chunk_length_schedule": [120]},
+            }
+            await ws.send(json.dumps(bos))
+
+            await ws.send(json.dumps({"text": text}))
+            await ws.send(json.dumps({"text": ""}))
+
+            async for raw in ws:
+                msg = json.loads(raw)
+                audio_b64 = msg.get("audio")
+                if audio_b64:
+                    import base64
+                    yield base64.b64decode(audio_b64)
+                if msg.get("isFinal"):
+                    break
