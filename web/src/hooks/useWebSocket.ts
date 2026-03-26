@@ -47,6 +47,7 @@ export function useWebSocket({
     ws.binaryType = "arraybuffer";
 
     ws.onopen = () => {
+      console.log("[WS] connected to", url);
       setConnected(true);
       onOpenRef.current?.();
     };
@@ -64,13 +65,15 @@ export function useWebSocket({
       }
     };
 
-    ws.onclose = () => {
+    ws.onclose = (event) => {
+      console.log("[WS] closed — code:", event.code, "reason:", event.reason);
       setConnected(false);
       onCloseRef.current?.();
       reconnectTimer.current = setTimeout(connect, 2000);
     };
 
-    ws.onerror = () => {
+    ws.onerror = (event) => {
+      console.error("[WS] error:", event);
       ws.close();
     };
 
