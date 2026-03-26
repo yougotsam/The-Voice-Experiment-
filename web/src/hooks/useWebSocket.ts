@@ -72,8 +72,8 @@ export function useWebSocket({
       reconnectTimer.current = setTimeout(connect, 2000);
     };
 
-    ws.onerror = (event) => {
-      console.error("[WS] error:", event);
+    ws.onerror = () => {
+      console.error("[WS] connection error — server may be unreachable at", url);
       ws.close();
     };
 
