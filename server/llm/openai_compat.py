@@ -31,6 +31,7 @@ class OpenAICompatLLM(LLMProvider):
         )
         async for chunk in stream:
             if not chunk.choices:
+                logger.debug("Stream chunk with no choices: %r", chunk)
                 continue
             delta = chunk.choices[0].delta
             if delta.content:
