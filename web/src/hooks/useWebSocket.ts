@@ -59,7 +59,9 @@ export function useWebSocket({
         try {
           const msg: ServerMessage = JSON.parse(event.data);
           if (msg.type === "ping") {
-            ws.send(JSON.stringify({ type: "pong" }));
+            if (ws.readyState === WebSocket.OPEN) {
+              ws.send(JSON.stringify({ type: "pong" }));
+            }
             return;
           }
           onMessageRef.current?.(msg);
