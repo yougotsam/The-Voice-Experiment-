@@ -59,12 +59,18 @@ class AssemblyAISTT(STTProvider):
             logger.info("AssemblyAI connection closed")
         except Exception:
             logger.exception("AssemblyAI receive error")
+        finally:
+            self._ws = None
 
     async def send_audio(self, audio: bytes) -> None:
         if self._ws is None:
             return
-        encoded = base64.b64encode(audio).decode("utf-8")
-        await self._ws.send(json.dumps({"audio_data": encoded}))
+        try:
+            encoded = base64.b64encode(audio).decode("utf-8")
+            await self._ws.send(json.dumps({"audio_data": encoded}))
+        except Exception:
+            logger.warning("AssemblyAI send failed, connection lost")
+            self._ws = None
 
     async def stop(self) -> None:
         if self._ws:

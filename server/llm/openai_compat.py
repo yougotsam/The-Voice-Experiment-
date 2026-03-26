@@ -26,10 +26,12 @@ class OpenAICompatLLM(LLMProvider):
             model=self._model,
             messages=full_messages,
             stream=True,
-            max_tokens=256,
+            max_tokens=1024,
             temperature=0.7,
         )
         async for chunk in stream:
+            if not chunk.choices:
+                continue
             delta = chunk.choices[0].delta
             if delta.content:
                 yield delta.content
