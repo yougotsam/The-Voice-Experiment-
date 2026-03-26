@@ -86,8 +86,8 @@ async def websocket_endpoint(ws: WebSocket) -> None:
                 while True:
                     await asyncio.sleep(25)
                     await ws.send_text(encode_message(ServerMessageType.PING, {}))
-            except Exception:
-                pass
+            except (WebSocketDisconnect, Exception):
+                return
 
         ping_task = asyncio.create_task(_ping_loop())
 
@@ -100,7 +100,7 @@ async def websocket_endpoint(ws: WebSocket) -> None:
                 msg = decode_message(data["text"])
                 msg_type = msg.get("type", "")
 
-                if msg_type == "pong":
+                if msg_type == ClientMessageType.PONG:
                     continue
                 elif msg_type == ClientMessageType.START:
                     try:

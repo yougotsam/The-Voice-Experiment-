@@ -8,6 +8,7 @@ class ClientMessageType(str, Enum):
     START = "start"
     STOP = "stop"
     INTERRUPT = "interrupt"
+    PONG = "pong"
 
 
 class ServerMessageType(str, Enum):
