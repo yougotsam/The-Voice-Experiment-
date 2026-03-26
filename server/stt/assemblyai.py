@@ -1,5 +1,4 @@
 import asyncio
-import base64
 import json
 import logging
 from typing import Callable, Awaitable
@@ -11,8 +10,9 @@ from server.stt.base import STTProvider
 
 logger = logging.getLogger(__name__)
 
-ASSEMBLYAI_RT_URL = "wss://streaming.assemblyai.com/v2/realtime/ws"
+ASSEMBLYAI_URL = "wss://streaming.assemblyai.com/v3/ws"
 SAMPLE_RATE = 16000
+SPEECH_MODEL = "u3-rt-pro"
 
 
 class AssemblyAISTT(STTProvider):
@@ -26,13 +26,16 @@ class AssemblyAISTT(STTProvider):
         on_partial: Callable[[str], Awaitable[None]],
         on_final: Callable[[str], Awaitable[None]],
     ) -> None:
-        url = f"{ASSEMBLYAI_RT_URL}?sample_rate={SAMPLE_RATE}"
-        extra_headers = {"Authorization": self._api_key}
+        url = f"{ASSEMBLYAI_URL}?sample_rate={SAMPLE_RATE}&speech_model={SPEECH_MODEL}"
+        extra_headers = {
+            "Authorization": self._api_key,
+            "AssemblyAI-Version": "2025-05-12",
+        }
         self._ws = await websockets.connect(url, additional_headers=extra_headers)
 
         session_msg = await self._ws.recv()
         session_data = json.loads(session_msg)
-        logger.info("AssemblyAI session started: %s", session_data.get("session_id"))
+        logger.info("AssemblyAI v3 session started: %s", session_data.get("id"))
 
         self._recv_task = asyncio.create_task(
             self._receive_loop(on_partial, on_final)
@@ -47,14 +50,15 @@ class AssemblyAISTT(STTProvider):
         try:
             async for raw in self._ws:
                 msg = json.loads(raw)
-                msg_type = msg.get("message_type")
-                text = msg.get("text", "")
-                if not text:
+                msg_type = msg.get("type")
+                transcript = msg.get("transcript", "")
+                if not transcript:
                     continue
-                if msg_type == "PartialTranscript":
-                    await on_partial(text)
-                elif msg_type == "FinalTranscript":
-                    await on_final(text)
+                if msg_type == "Turn":
+                    if msg.get("end_of_turn"):
+                        await on_final(transcript)
+                    else:
+                        await on_partial(transcript)
         except websockets.ConnectionClosed:
             logger.info("AssemblyAI connection closed")
         except Exception:
@@ -66,8 +70,7 @@ class AssemblyAISTT(STTProvider):
         if self._ws is None:
             return
         try:
-            encoded = base64.b64encode(audio).decode("utf-8")
-            await self._ws.send(json.dumps({"audio_data": encoded}))
+            await self._ws.send(audio)
         except Exception:
             logger.warning("AssemblyAI send failed, connection lost")
             self._ws = None
@@ -75,7 +78,7 @@ class AssemblyAISTT(STTProvider):
     async def stop(self) -> None:
         if self._ws:
             try:
-                await self._ws.send(json.dumps({"terminate_session": True}))
+                await self._ws.send(json.dumps({"type": "Terminate"}))
                 await self._ws.close()
             except Exception:
                 pass
