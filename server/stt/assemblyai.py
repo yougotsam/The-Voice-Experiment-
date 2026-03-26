@@ -20,12 +20,14 @@ class AssemblyAISTT(STTProvider):
         self._api_key = api_key
         self._ws: ClientConnection | None = None
         self._recv_task: asyncio.Task | None = None
+        self._got_final = asyncio.Event()
 
     async def start(
         self,
         on_partial: Callable[[str], Awaitable[None]],
         on_final: Callable[[str], Awaitable[None]],
     ) -> None:
+        self._got_final.clear()
         url = f"{ASSEMBLYAI_URL}?sample_rate={SAMPLE_RATE}&speech_model={SPEECH_MODEL}"
         extra_headers = {
             "Authorization": self._api_key,
@@ -52,18 +54,19 @@ class AssemblyAISTT(STTProvider):
                 msg = json.loads(raw)
                 msg_type = msg.get("type")
                 transcript = msg.get("transcript", "")
-                if not transcript:
-                    continue
                 if msg_type == "Turn":
                     if msg.get("end_of_turn"):
-                        await on_final(transcript)
-                    else:
+                        if transcript:
+                            await on_final(transcript)
+                        self._got_final.set()
+                    elif transcript:
                         await on_partial(transcript)
         except websockets.ConnectionClosed:
             logger.info("AssemblyAI connection closed")
         except Exception:
             logger.exception("AssemblyAI receive error")
         finally:
+            self._got_final.set()
             self._ws = None
 
     async def send_audio(self, audio: bytes) -> None:
@@ -74,6 +77,17 @@ class AssemblyAISTT(STTProvider):
         except Exception:
             logger.warning("AssemblyAI send failed, connection lost")
             self._ws = None
+
+    async def force_flush(self) -> None:
+        if self._ws is None:
+            return
+        try:
+            await self._ws.send(json.dumps({"type": "ForceEndpoint"}))
+            await asyncio.wait_for(self._got_final.wait(), timeout=5.0)
+        except asyncio.TimeoutError:
+            logger.warning("Timed out waiting for final transcript after ForceEndpoint")
+        except Exception:
+            logger.warning("ForceEndpoint failed")
 
     async def stop(self) -> None:
         if self._ws:
