@@ -3,6 +3,7 @@
   "version": "1.0.0",
   "main": "index.js",
   "scripts": {
+    "postinstall": "node scripts/copy-vad-models.js",
     "dev": "next dev",
     "build": "next build",
     "start": "next start"
