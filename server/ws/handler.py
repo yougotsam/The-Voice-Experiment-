@@ -44,8 +44,12 @@ def _create_tts():
         chain = []
         for name in settings.tts_fallback_chain.split(","):
             name = name.strip()
-            if name:
+            if not name:
+                continue
+            try:
                 chain.append(_create_single_tts(name))
+            except Exception:
+                logger.warning("TTS provider '%s' not available, skipping", name, exc_info=True)
         return FallbackTTS(chain) if chain else _create_single_tts("elevenlabs")
 
     return _create_single_tts(provider)
