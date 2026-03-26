@@ -38,10 +38,14 @@ class Orchestrator:
     async def start_listening(self) -> None:
         await self._stt.stop()
         self._session.is_active = True
-        await self._stt.start(
-            on_partial=self._on_partial_transcript,
-            on_final=self._on_final_transcript,
-        )
+        try:
+            await self._stt.start(
+                on_partial=self._on_partial_transcript,
+                on_final=self._on_final_transcript,
+            )
+        except Exception:
+            self._session.is_active = False
+            raise
         await self._send_status("listening")
 
     async def stop_listening(self) -> None:
