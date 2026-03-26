@@ -61,23 +61,24 @@ async def websocket_endpoint(ws: WebSocket) -> None:
     session_id = str(uuid.uuid4())
     logger.info("WS connected: %s", session_id)
 
-    session = ConversationSession(session_id)
-    stt = AssemblyAISTT(settings.assemblyai_api_key)
-    llm = OpenAICompatLLM(settings.llm_api_key, settings.llm_base_url, settings.llm_model)
-    tts = _create_tts()
-
-    async def send_json(msg_type: str, data: dict) -> None:
-        await ws.send_text(encode_message(ServerMessageType(msg_type), data))
-
-    async def send_audio(audio: bytes) -> None:
-        await ws.send_bytes(audio)
-
-    async def send_status(status: str) -> None:
-        await ws.send_text(encode_message(ServerMessageType.STATUS, {"status": status}))
-
-    orchestrator = Orchestrator(stt, llm, tts, session, send_json, send_audio, send_status)
-
+    orchestrator: Orchestrator | None = None
     try:
+        session = ConversationSession(session_id)
+        stt = AssemblyAISTT(settings.assemblyai_api_key)
+        llm = OpenAICompatLLM(settings.llm_api_key, settings.llm_base_url, settings.llm_model)
+        tts = _create_tts()
+
+        async def send_json(msg_type: str, data: dict) -> None:
+            await ws.send_text(encode_message(ServerMessageType(msg_type), data))
+
+        async def send_audio(audio: bytes) -> None:
+            await ws.send_bytes(audio)
+
+        async def send_status(status: str) -> None:
+            await ws.send_text(encode_message(ServerMessageType.STATUS, {"status": status}))
+
+        orchestrator = Orchestrator(stt, llm, tts, session, send_json, send_audio, send_status)
+
         while True:
             data = await ws.receive()
 
@@ -103,4 +104,5 @@ async def websocket_endpoint(ws: WebSocket) -> None:
     except Exception:
         logger.exception("WS error: %s", session_id)
     finally:
-        await orchestrator.shutdown()
+        if orchestrator:
+            await orchestrator.shutdown()
