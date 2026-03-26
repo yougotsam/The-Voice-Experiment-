@@ -51,7 +51,10 @@ class Orchestrator:
     async def stop_listening(self) -> None:
         self._session.is_active = False
         if hasattr(self._stt, "force_flush"):
-            await self._stt.force_flush()
+            try:
+                await self._stt.force_flush()
+            except Exception:
+                logger.warning("force_flush failed, proceeding to stop", exc_info=True)
         await self._stt.stop()
 
     async def interrupt(self) -> None:

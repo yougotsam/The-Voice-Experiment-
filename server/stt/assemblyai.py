@@ -89,6 +89,7 @@ class AssemblyAISTT(STTProvider):
         if self._ws is None:
             return
         try:
+            self._got_final.clear()
             await self._ws.send(json.dumps({"type": "ForceEndpoint"}))
             await asyncio.wait_for(self._got_final.wait(), timeout=5.0)
         except asyncio.TimeoutError:
