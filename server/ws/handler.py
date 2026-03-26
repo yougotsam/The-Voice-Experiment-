@@ -1,3 +1,4 @@
+import asyncio
 import logging
 import uuid
 
@@ -62,6 +63,7 @@ async def websocket_endpoint(ws: WebSocket) -> None:
     logger.info("WS connected: %s", session_id)
 
     orchestrator: Orchestrator | None = None
+    ping_task: asyncio.Task | None = None
     try:
         session = ConversationSession(session_id)
         stt = AssemblyAISTT(settings.assemblyai_api_key)
@@ -79,6 +81,16 @@ async def websocket_endpoint(ws: WebSocket) -> None:
 
         orchestrator = Orchestrator(stt, llm, tts, session, send_json, send_audio, send_status)
 
+        async def _ping_loop():
+            try:
+                while True:
+                    await asyncio.sleep(25)
+                    await ws.send_text(encode_message(ServerMessageType.PING, {}))
+            except Exception:
+                pass
+
+        ping_task = asyncio.create_task(_ping_loop())
+
         while True:
             data = await ws.receive()
 
@@ -88,7 +100,9 @@ async def websocket_endpoint(ws: WebSocket) -> None:
                 msg = decode_message(data["text"])
                 msg_type = msg.get("type", "")
 
-                if msg_type == ClientMessageType.START:
+                if msg_type == "pong":
+                    continue
+                elif msg_type == ClientMessageType.START:
                     try:
                         await orchestrator.start_listening()
                     except Exception:
@@ -109,5 +123,7 @@ async def websocket_endpoint(ws: WebSocket) -> None:
     except Exception:
         logger.exception("WS error: %s", session_id)
     finally:
+        if ping_task:
+            ping_task.cancel()
         if orchestrator:
             await orchestrator.shutdown()
