@@ -53,8 +53,10 @@ class AssemblyAISTT(STTProvider):
             async for raw in self._ws:
                 msg = json.loads(raw)
                 msg_type = msg.get("type")
+                logger.debug("AssemblyAI recv: type=%s data=%s", msg_type, str(raw)[:200])
                 transcript = msg.get("transcript", "")
                 if msg_type == "Turn":
+                    logger.info("Turn event: end_of_turn=%s transcript='%s'", msg.get("end_of_turn"), transcript[:100])
                     if msg.get("end_of_turn"):
                         if transcript:
                             await on_final(transcript)
@@ -69,11 +71,16 @@ class AssemblyAISTT(STTProvider):
             self._got_final.set()
             self._ws = None
 
+    _audio_chunks_sent = 0
+
     async def send_audio(self, audio: bytes) -> None:
         if self._ws is None:
             return
         try:
             await self._ws.send(audio)
+            self._audio_chunks_sent += 1
+            if self._audio_chunks_sent % 50 == 1:
+                logger.info("Audio chunk sent #%d (%d bytes)", self._audio_chunks_sent, len(audio))
         except Exception:
             logger.warning("AssemblyAI send failed, connection lost")
             self._ws = None
