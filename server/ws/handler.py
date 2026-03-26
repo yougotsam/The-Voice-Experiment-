@@ -89,7 +89,12 @@ async def websocket_endpoint(ws: WebSocket) -> None:
                 msg_type = msg.get("type", "")
 
                 if msg_type == ClientMessageType.START:
-                    await orchestrator.start_listening()
+                    try:
+                        await orchestrator.start_listening()
+                    except Exception:
+                        logger.exception("Failed to start listening")
+                        await send_json("error", {"text": "Failed to connect to speech recognition service."})
+                        await send_status("idle")
                 elif msg_type == ClientMessageType.STOP:
                     await orchestrator.stop_listening()
                 elif msg_type == ClientMessageType.INTERRUPT:
