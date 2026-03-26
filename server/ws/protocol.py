@@ -8,6 +8,7 @@ class ClientMessageType(str, Enum):
     START = "start"
     STOP = "stop"
     INTERRUPT = "interrupt"
+    PONG = "pong"
 
 
 class ServerMessageType(str, Enum):
@@ -19,6 +20,7 @@ class ServerMessageType(str, Enum):
     ERROR = "error"
     STATUS = "status"
     METRICS = "metrics"
+    PING = "ping"
 
 
 def encode_message(msg_type: ServerMessageType, data: dict[str, Any] | None = None) -> str:

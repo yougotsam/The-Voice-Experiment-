@@ -58,6 +58,12 @@ export function useWebSocket({
       } else {
         try {
           const msg: ServerMessage = JSON.parse(event.data);
+          if (msg.type === "ping") {
+            if (ws.readyState === WebSocket.OPEN) {
+              ws.send(JSON.stringify({ type: "pong" }));
+            }
+            return;
+          }
           onMessageRef.current?.(msg);
         } catch {
           // ignore malformed messages
