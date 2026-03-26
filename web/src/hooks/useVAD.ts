@@ -18,12 +18,17 @@ export function useVAD({ onSpeechStart, onSpeechEnd, enabled = false }: UseVADOp
 
   const startVAD = useCallback(async () => {
     if (vadRef.current) return;
+    const origError = console.error;
     try {
+      console.error = (...args: unknown[]) => {
+        const msg = String(args[0] ?? "");
+        if (msg.includes("model file") || msg.includes("onnx")) return;
+        origError.apply(console, args);
+      };
       const vadModule = await import("@ricky0123/vad-web");
-      const CDN = "https://cdn.jsdelivr.net/npm/@ricky0123/vad-web@0.0.30/dist/";
       const vad = await vadModule.MicVAD.new({
-        baseAssetPath: CDN,
-        onnxWASMBasePath: "https://cdn.jsdelivr.net/npm/onnxruntime-web@1.21.0/dist/",
+        baseAssetPath: "/",
+        onnxWASMBasePath: "/",
         positiveSpeechThreshold: 0.8,
         negativeSpeechThreshold: 0.4,
         minSpeechMs: 150,
@@ -40,8 +45,10 @@ export function useVAD({ onSpeechStart, onSpeechEnd, enabled = false }: UseVADOp
       });
       vad.start();
       vadRef.current = vad;
-    } catch (err) {
-      console.warn("VAD init failed, falling back to push-to-talk:", err);
+    } catch {
+      // VAD not available -- push-to-talk still works
+    } finally {
+      console.error = origError;
     }
   }, []);
 

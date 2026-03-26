@@ -49,3 +49,8 @@ context_audio.wav
 node_modules/
 .next/
 next-env.d.ts
+
+# VAD/ONNX model files (copied by postinstall)
+web/public/*.onnx
+web/public/*.wasm
+web/public/vad.worklet.bundle.min.js
