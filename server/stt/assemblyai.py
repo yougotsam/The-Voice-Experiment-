@@ -11,7 +11,7 @@ from server.stt.base import STTProvider
 
 logger = logging.getLogger(__name__)
 
-ASSEMBLYAI_RT_URL = "wss://api.assemblyai.com/v2/realtime/ws"
+ASSEMBLYAI_RT_URL = "wss://streaming.assemblyai.com/v2/realtime/ws"
 SAMPLE_RATE = 16000
 
 
@@ -26,9 +26,8 @@ class AssemblyAISTT(STTProvider):
         on_partial: Callable[[str], Awaitable[None]],
         on_final: Callable[[str], Awaitable[None]],
     ) -> None:
-        url = f"{ASSEMBLYAI_RT_URL}?sample_rate={SAMPLE_RATE}"
-        extra_headers = {"Authorization": self._api_key}
-        self._ws = await websockets.connect(url, additional_headers=extra_headers)
+        url = f"{ASSEMBLYAI_RT_URL}?sample_rate={SAMPLE_RATE}&token={self._api_key}"
+        self._ws = await websockets.connect(url)
 
         session_msg = await self._ws.recv()
         session_data = json.loads(session_msg)
