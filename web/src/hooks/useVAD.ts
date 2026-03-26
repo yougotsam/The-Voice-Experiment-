@@ -19,8 +19,11 @@ export function useVAD({ onSpeechStart, onSpeechEnd, enabled = false }: UseVADOp
   const startVAD = useCallback(async () => {
     if (vadRef.current) return;
     try {
-      const { MicVAD } = await import("@ricky0123/vad-web");
-      const vad = await MicVAD.new({
+      const vadModule = await import("@ricky0123/vad-web");
+      const CDN = "https://cdn.jsdelivr.net/npm/@ricky0123/vad-web@0.0.30/dist/";
+      const vad = await vadModule.MicVAD.new({
+        baseAssetPath: CDN,
+        onnxWASMBasePath: "https://cdn.jsdelivr.net/npm/onnxruntime-web@1.21.0/dist/",
         positiveSpeechThreshold: 0.8,
         negativeSpeechThreshold: 0.4,
         minSpeechMs: 150,
