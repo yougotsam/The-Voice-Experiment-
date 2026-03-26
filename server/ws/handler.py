@@ -49,7 +49,7 @@ def _create_tts():
             try:
                 chain.append(_create_single_tts(name))
             except Exception:
-                logger.warning("TTS provider '%s' not available, skipping", name)
+                logger.warning("TTS provider '%s' not available, skipping", name, exc_info=True)
         return FallbackTTS(chain) if chain else _create_single_tts("elevenlabs")
 
     return _create_single_tts(provider)
