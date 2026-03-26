@@ -21,6 +21,7 @@ class AssemblyAISTT(STTProvider):
         self._ws: ClientConnection | None = None
         self._recv_task: asyncio.Task | None = None
         self._got_final = asyncio.Event()
+        self._audio_chunks_sent = 0
 
     async def start(
         self,
@@ -28,6 +29,7 @@ class AssemblyAISTT(STTProvider):
         on_final: Callable[[str], Awaitable[None]],
     ) -> None:
         self._got_final.clear()
+        self._audio_chunks_sent = 0
         url = f"{ASSEMBLYAI_URL}?sample_rate={SAMPLE_RATE}&speech_model={SPEECH_MODEL}"
         extra_headers = {
             "Authorization": self._api_key,
@@ -70,8 +72,6 @@ class AssemblyAISTT(STTProvider):
         finally:
             self._got_final.set()
             self._ws = None
-
-    _audio_chunks_sent = 0
 
     async def send_audio(self, audio: bytes) -> None:
         if self._ws is None:
