@@ -11,7 +11,7 @@ from server.stt.base import STTProvider
 
 logger = logging.getLogger(__name__)
 
-ASSEMBLYAI_RT_URL = "wss://api.assemblyai.com/v2/realtime/ws"
+ASSEMBLYAI_RT_URL = "wss://streaming.assemblyai.com/v2/realtime/ws"
 SAMPLE_RATE = 16000
 
 
