@@ -19,12 +19,15 @@ class ElevenLabsTTS(TTSProvider):
         self._voice_id = voice_id
 
     async def synthesize(self, text: str) -> AsyncIterator[bytes]:
+        if not self._api_key:
+            raise RuntimeError("ElevenLabs API key not configured")
         url = ELEVENLABS_WS_URL.format(voice_id=self._voice_id)
         params = (
             f"?model_id=eleven_turbo_v2_5"
             f"&output_format=pcm_24000"
         )
         headers = {"xi-api-key": self._api_key}
+        logger.debug("Connecting to ElevenLabs TTS: %s", url)
 
         async with websockets.connect(url + params, additional_headers=headers) as ws:
             bos = {
