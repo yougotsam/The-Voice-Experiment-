@@ -16,6 +16,26 @@ logger = logging.getLogger(__name__)
 SENTENCE_END = re.compile(r"(?<=[.!?])\s+")
 MAX_TOOL_ROUNDS = 3
 
+TOOL_AWARENESS_PREAMBLE = (
+    "\n\nIMPORTANT RULES ABOUT YOUR CAPABILITIES:\n"
+    "- You have access to specific tools listed below. ONLY claim to perform actions that you have tools for.\n"
+    "- NEVER pretend, simulate, or hallucinate performing an action. If you don't have a tool for something, say so honestly.\n"
+    "- NEVER say you 'just did' something unless you actually called a tool and got a real result back.\n"
+    "- If someone asks you to do something you can't do, tell them clearly: 'I don't have that capability yet' or 'that integration isn't set up.'\n"
+    "- Be transparent about what worked and what didn't when you use a tool.\n"
+    "\nYour available tools:\n"
+)
+
+NO_TOOLS_NOTICE = (
+    "\n\nIMPORTANT RULES ABOUT YOUR CAPABILITIES:\n"
+    "- You are a voice-based conversational AI. You can talk, think, and advise.\n"
+    "- You do NOT have access to any external tools, APIs, or integrations right now.\n"
+    "- NEVER pretend to create, post, send, search, or modify anything in external systems.\n"
+    "- NEVER say 'I just created a blog' or 'I connected to your CRM' or anything similar.\n"
+    "- If someone asks you to perform an action on an external system, be honest: 'I don't have that integration set up yet.'\n"
+    "- You CAN help with strategy, brainstorming, coaching, and conversation.\n"
+)
+
 
 class Orchestrator:
     def __init__(
@@ -106,6 +126,7 @@ class Orchestrator:
             self._session.add_user_message(user_text)
 
             tools = self._tool_registry.get_schemas() if self._tool_registry and len(self._tool_registry) > 0 else None
+            system_prompt = self._build_system_prompt(tools)
 
             llm_measured = False
             tts_measured = False
@@ -118,7 +139,7 @@ class Orchestrator:
 
                 async for token in self._llm.stream_chat(
                     self._session.get_messages(),
-                    system_prompt=self._session.system_prompt,
+                    system_prompt=system_prompt,
                     tools=tools,
                 ):
                     if isinstance(token, dict):
@@ -211,6 +232,16 @@ class Orchestrator:
                 "summary": summary,
             })
             self._session.add_tool_result(tc_id, name, result)
+
+    def _build_system_prompt(self, tools: list[dict] | None) -> str:
+        base = self._session.system_prompt
+        if not tools:
+            return base + NO_TOOLS_NOTICE
+        tool_lines = []
+        for t in tools:
+            fn = t.get("function", {})
+            tool_lines.append(f"- {fn.get('name', '?')}: {fn.get('description', '')}")
+        return base + TOOL_AWARENESS_PREAMBLE + "\n".join(tool_lines)
 
     @staticmethod
     def _summarize_tool_result(name: str, result: dict) -> str:
