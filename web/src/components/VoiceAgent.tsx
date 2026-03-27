@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useRef, useState, useEffect } from "react";
+import { useCallback, useRef, useState, useEffect, useMemo } from "react";
 import { useWebSocket, ServerMessage } from "@/hooks/useWebSocket";
 import { useMicrophone } from "@/hooks/useMicrophone";
 import { useAudioPlayback } from "@/hooks/useAudioPlayback";
@@ -9,10 +9,9 @@ import { TranscriptPanel, TranscriptEntry } from "./TranscriptPanel";
 import { MetricsOverlay } from "./MetricsOverlay";
 import { PersonaSelector } from "./PersonaSelector";
 import { VoiceOrb } from "./VoiceOrb";
-
-type AgentState = "idle" | "listening" | "processing" | "speaking";
-type InputMode = "push" | "vad";
-type Metrics = { llm_ttfb_ms: number; tts_ttfb_ms: number; total_ms: number };
+import { TabPanel } from "./TabPanel";
+import { StagingArea, StagingEntry } from "./StagingArea";
+import type { AgentState, InputMode, Metrics } from "@/types";
 
 const WS_URL = process.env.NEXT_PUBLIC_WS_URL || "ws://localhost:8000/ws";
 const STUCK_TIMEOUT_MS = 30000;
@@ -27,6 +26,7 @@ export function VoiceAgent() {
   const [inputMode, setInputMode] = useState<InputMode>("push");
   const [metrics, setMetrics] = useState<Metrics | null>(null);
   const [textInput, setTextInput] = useState("");
+  const [stagingEntries, setStagingEntries] = useState<StagingEntry[]>([]);
   const agentTextBuffer = useRef("");
   const cappedSetEntries = useCallback(
     (updater: (prev: TranscriptEntry[]) => TranscriptEntry[]) => {
@@ -135,6 +135,18 @@ export function VoiceAgent() {
             };
             return updated;
           });
+          if (msg.name === "draft_content" && msg.success) {
+            setStagingEntries((prev) => [
+              ...prev,
+              {
+                id: `draft-${Date.now()}`,
+                type: "Draft",
+                title: msg.summary || "Content Draft",
+                content: msg.summary || "",
+                timestamp: Date.now(),
+              },
+            ]);
+          }
           break;
         case "persona.loaded":
           if (msg.greeting) {
@@ -292,11 +304,18 @@ export function VoiceAgent() {
     speaking: "Speaking",
   };
 
+  const tabs = useMemo(() => [
+    { id: "transcript", label: "Transcript", badge: entries.length || undefined },
+    { id: "staging", label: "Staging", badge: stagingEntries.length || undefined },
+    { id: "crm", label: "CRM" },
+    { id: "analytics", label: "Analytics" },
+  ], [entries.length, stagingEntries.length]);
+
   return (
-    <div className="flex w-full max-w-2xl flex-col items-center gap-6 relative z-10">
-      <div className="flex flex-col items-center gap-1 mb-2">
+    <div className="flex w-full max-w-2xl flex-col items-center gap-5 relative z-10">
+      <div className="flex flex-col items-center gap-1">
         <h1 className="text-3xl font-heading font-semibold tracking-wide text-ivory">
-          Voice Agent
+          ZeebsOS
         </h1>
         <div className="flex items-center gap-3 mt-2">
           <div className="flex items-center gap-1.5">
@@ -307,6 +326,7 @@ export function VoiceAgent() {
           </div>
           <div className="w-px h-3" style={{ background: "rgba(200, 169, 126, 0.15)" }} />
           <button
+            type="button"
             onClick={handleModeSwitch}
             className="text-[10px] uppercase tracking-widest px-2 py-0.5 rounded-full transition-all duration-300 hover:text-gold-light"
             style={{
@@ -321,7 +341,7 @@ export function VoiceAgent() {
 
       <PersonaSelector onSelect={handlePersona} />
 
-      <div className="flex flex-col items-center gap-4 my-4">
+      <div className="flex flex-col items-center gap-3">
         <VoiceOrb
           state={state}
           label={stateLabels[state]}
@@ -333,6 +353,7 @@ export function VoiceAgent() {
 
         {(state === "speaking" || state === "processing") && (
           <button
+            type="button"
             onClick={() => { doInterrupt(); setAgentState("idle"); }}
             className="px-5 py-1.5 rounded-full text-[11px] font-medium uppercase tracking-widest transition-all duration-300 hover:bg-gold/10"
             style={{
@@ -343,9 +364,9 @@ export function VoiceAgent() {
             Interrupt
           </button>
         )}
-      </div>
 
-      <MetricsOverlay metrics={metrics} />
+        <MetricsOverlay metrics={metrics} />
+      </div>
 
       <form onSubmit={handleTextSubmit} className="w-full flex gap-2">
         <input
@@ -374,7 +395,50 @@ export function VoiceAgent() {
         </button>
       </form>
 
-      <TranscriptPanel entries={entries} partialTranscript={partial} />
+      <TabPanel tabs={tabs} defaultTab="transcript">
+        {{
+          transcript: <TranscriptPanel entries={entries} partialTranscript={partial} />,
+          staging: <StagingArea entries={stagingEntries} />,
+          crm: (
+            <div className="flex flex-col items-center justify-center py-12 gap-3">
+              <div className="h-10 w-10 rounded-full flex items-center justify-center"
+                style={{ border: "1px solid rgba(200, 169, 126, 0.15)" }}
+              >
+                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" style={{ color: "rgba(200, 169, 126, 0.3)" }}>
+                  <path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2" />
+                  <circle cx="9" cy="7" r="4" />
+                  <path d="M22 21v-2a4 4 0 0 0-3-3.87" />
+                  <path d="M16 3.13a4 4 0 0 1 0 7.75" />
+                </svg>
+              </div>
+              <p className="text-[11px] uppercase tracking-widest" style={{ color: "rgba(244, 240, 234, 0.25)" }}>
+                CRM Panel
+              </p>
+              <p className="text-xs text-center max-w-[240px]" style={{ color: "rgba(244, 240, 234, 0.15)" }}>
+                Contact search results and pipeline data will appear here
+              </p>
+            </div>
+          ),
+          analytics: (
+            <div className="flex flex-col items-center justify-center py-12 gap-3">
+              <div className="h-10 w-10 rounded-full flex items-center justify-center"
+                style={{ border: "1px solid rgba(200, 169, 126, 0.15)" }}
+              >
+                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" style={{ color: "rgba(200, 169, 126, 0.3)" }}>
+                  <path d="M3 3v18h18" />
+                  <path d="m19 9-5 5-4-4-3 3" />
+                </svg>
+              </div>
+              <p className="text-[11px] uppercase tracking-widest" style={{ color: "rgba(244, 240, 234, 0.25)" }}>
+                Analytics
+              </p>
+              <p className="text-xs text-center max-w-[240px]" style={{ color: "rgba(244, 240, 234, 0.15)" }}>
+                Session metrics and usage insights coming soon
+              </p>
+            </div>
+          ),
+        }}
+      </TabPanel>
     </div>
   );
 }

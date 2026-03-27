@@ -25,23 +25,29 @@ export function TranscriptPanel({
     bottomRef.current?.scrollIntoView({ behavior: "smooth" });
   }, [entries, partialTranscript]);
 
-  if (entries.length === 0 && !partialTranscript) return null;
+  if (entries.length === 0 && !partialTranscript) {
+    return (
+      <div className="flex flex-col items-center justify-center py-12 gap-3">
+        <div className="h-10 w-10 rounded-full flex items-center justify-center"
+          style={{ border: "1px solid rgba(200, 169, 126, 0.15)" }}
+        >
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" style={{ color: "rgba(200, 169, 126, 0.3)" }}>
+            <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z" />
+          </svg>
+        </div>
+        <p className="text-[11px] uppercase tracking-widest" style={{ color: "rgba(244, 240, 234, 0.25)" }}>
+          No messages yet
+        </p>
+        <p className="text-xs text-center max-w-[240px]" style={{ color: "rgba(244, 240, 234, 0.15)" }}>
+          Start talking or type a message to begin
+        </p>
+      </div>
+    );
+  }
 
   return (
-    <div
-      className="w-full rounded-2xl p-5 backdrop-blur-sm"
-      style={{
-        background: "rgba(10, 22, 36, 0.6)",
-        border: "1px solid rgba(200, 169, 126, 0.1)",
-      }}
-    >
-      <h2
-        className="mb-4 text-[10px] font-medium uppercase tracking-[0.2em]"
-        style={{ color: "rgba(200, 169, 126, 0.5)" }}
-      >
-        Conversation
-      </h2>
-      <div className="max-h-72 space-y-3 overflow-y-auto pr-1">
+    <div>
+      <div className="max-h-80 space-y-3 overflow-y-auto pr-1">
         {entries.map((entry, i) => (
           <div key={i} className="flex gap-3">
             <div
