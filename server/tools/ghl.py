@@ -77,7 +77,7 @@ class GHLContactSearch(Tool):
                 "name": f'{c.get("firstName", "")} {c.get("lastName", "")}'.strip(),
                 "email": c.get("email"),
                 "phone": c.get("phone"),
-                "tags": c.get("tags", []),
+                "tags": c.get("tags") or [],
             })
         return {"contacts": results, "total": len(contacts), "returned": len(results)}
 

@@ -44,7 +44,7 @@ async def list_contacts(query: str = "", limit: int = 20):
             "name": f'{c.get("firstName", "")} {c.get("lastName", "")}'.strip(),
             "email": c.get("email", ""),
             "phone": c.get("phone", ""),
-            "tags": c.get("tags", []),
+            "tags": c.get("tags") or [],
             "dateAdded": c.get("dateAdded", ""),
         })
     return {"contacts": results, "total": len(contacts)}
