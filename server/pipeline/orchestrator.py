@@ -107,12 +107,14 @@ class Orchestrator:
 
             tools = self._tool_registry.get_schemas() if self._tool_registry and len(self._tool_registry) > 0 else None
 
+            llm_measured = False
+            tts_measured = False
+
             for _round in range(MAX_TOOL_ROUNDS + 1):
                 full_response = ""
                 tool_calls_result = None
                 buffer = ""
                 first_llm_token = True
-                first_tts_chunk = True
 
                 async for token in self._llm.stream_chat(
                     self._session.get_messages(),
@@ -124,7 +126,9 @@ class Orchestrator:
                         continue
 
                     if first_llm_token:
-                        llm_ttfb = time.perf_counter() - t_start
+                        if not llm_measured:
+                            llm_ttfb = time.perf_counter() - t_start
+                            llm_measured = True
                         first_llm_token = False
 
                     full_response += token
@@ -138,18 +142,18 @@ class Orchestrator:
                                 await self._send_json("agent.text", {"text": sentence})
                                 t_before_tts = time.perf_counter()
                                 await self._synthesize_and_send(sentence)
-                                if first_tts_chunk:
+                                if not tts_measured:
                                     tts_ttfb = time.perf_counter() - t_before_tts
-                                    first_tts_chunk = False
+                                    tts_measured = True
                         buffer = sentences[-1]
 
                 if buffer.strip():
                     await self._send_json("agent.text", {"text": buffer.strip()})
                     t_before_tts = time.perf_counter()
                     await self._synthesize_and_send(buffer.strip())
-                    if first_tts_chunk:
+                    if not tts_measured:
                         tts_ttfb = time.perf_counter() - t_before_tts
-                        first_tts_chunk = False
+                        tts_measured = True
 
                 if not tool_calls_result:
                     self._session.add_assistant_message(full_response)
