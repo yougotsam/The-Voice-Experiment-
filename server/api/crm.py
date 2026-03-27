@@ -38,7 +38,7 @@ async def list_contacts(query: str = "", limit: int = 20):
 
     if resp.status_code != 200:
         logger.error("CRM contacts %s: %s", resp.status_code, resp.text[:300])
-        raise HTTPException(status_code=resp.status_code, detail="Failed to fetch contacts")
+        raise HTTPException(status_code=502, detail="CRM service returned an error")
     data = resp.json()
 
     contacts = data.get("contacts") or []
@@ -70,7 +70,7 @@ async def list_pipelines():
 
     if resp.status_code != 200:
         logger.error("CRM pipelines %s: %s", resp.status_code, resp.text[:300])
-        raise HTTPException(status_code=resp.status_code, detail="Failed to fetch pipelines")
+        raise HTTPException(status_code=502, detail="CRM service returned an error")
     data = resp.json()
 
     pipelines = data.get("pipelines") or []
@@ -99,7 +99,7 @@ async def list_opportunities(pipeline_id: str = "", limit: int = 20):
 
     if resp.status_code != 200:
         logger.error("CRM opportunities %s: %s", resp.status_code, resp.text[:300])
-        raise HTTPException(status_code=resp.status_code, detail="Failed to fetch opportunities")
+        raise HTTPException(status_code=502, detail="CRM service returned an error")
     data = resp.json()
 
     opportunities = data.get("opportunities") or []
@@ -139,7 +139,7 @@ async def list_conversations(limit: int = 15):
 
     if resp.status_code != 200:
         logger.error("CRM conversations %s: %s", resp.status_code, resp.text[:300])
-        raise HTTPException(status_code=resp.status_code, detail="Failed to fetch conversations")
+        raise HTTPException(status_code=502, detail="CRM service returned an error")
     data = resp.json()
 
     conversations = data.get("conversations") or []

@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect, useCallback } from "react";
+import { useState, useEffect, useCallback, useRef } from "react";
 
 type Contact = {
   id: string;
@@ -42,12 +42,16 @@ export function CRMPanel() {
   const [error, setError] = useState<string | null>(null);
   const [searchQuery, setSearchQuery] = useState("");
 
+  const searchRef = useRef(searchQuery);
+  searchRef.current = searchQuery;
+
   const fetchData = useCallback(async (activeView: CRMView) => {
     setLoading(true);
     setError(null);
     try {
       if (activeView === "contacts") {
-        const params = searchQuery ? `?query=${encodeURIComponent(searchQuery)}` : "";
+        const q = searchRef.current;
+        const params = q ? `?query=${encodeURIComponent(q)}` : "";
         const resp = await fetch(`${API_BASE}/api/crm/contacts${params}`);
         if (!resp.ok) throw new Error(`${resp.status}`);
         const data = await resp.json();
@@ -73,7 +77,7 @@ export function CRMPanel() {
     } finally {
       setLoading(false);
     }
-  }, [searchQuery]);
+  }, []);
 
   useEffect(() => {
     fetchData(view);
