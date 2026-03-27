@@ -8,6 +8,24 @@ type UseVADOptions = {
   enabled?: boolean;
 };
 
+let vadModuleCache: typeof import("@ricky0123/vad-web") | null = null;
+let vadModuleLoading: Promise<typeof import("@ricky0123/vad-web")> | null = null;
+
+function preloadVADModule(): Promise<typeof import("@ricky0123/vad-web")> {
+  if (vadModuleCache) return Promise.resolve(vadModuleCache);
+  if (vadModuleLoading) return vadModuleLoading;
+  vadModuleLoading = import("@ricky0123/vad-web")
+    .then((mod) => {
+      vadModuleCache = mod;
+      return mod;
+    })
+    .catch((err) => {
+      vadModuleLoading = null;
+      throw err;
+    });
+  return vadModuleLoading;
+}
+
 export function useVAD({ onSpeechStart, onSpeechEnd, enabled = false }: UseVADOptions) {
   const [speaking, setSpeaking] = useState(false);
   const vadRef = useRef<{ destroy: () => void } | null>(null);
@@ -15,6 +33,10 @@ export function useVAD({ onSpeechStart, onSpeechEnd, enabled = false }: UseVADOp
   const onSpeechEndRef = useRef(onSpeechEnd);
   onSpeechStartRef.current = onSpeechStart;
   onSpeechEndRef.current = onSpeechEnd;
+
+  useEffect(() => {
+    preloadVADModule();
+  }, []);
 
   const startVAD = useCallback(async () => {
     if (vadRef.current) return;
@@ -25,7 +47,7 @@ export function useVAD({ onSpeechStart, onSpeechEnd, enabled = false }: UseVADOp
         if (msg.includes("model file") || msg.includes("onnx")) return;
         origError.apply(console, args);
       };
-      const vadModule = await import("@ricky0123/vad-web");
+      const vadModule = await preloadVADModule();
       const vad = await vadModule.MicVAD.new({
         baseAssetPath: "/",
         onnxWASMBasePath: "/",
