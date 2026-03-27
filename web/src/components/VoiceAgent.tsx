@@ -99,11 +99,12 @@ export function VoiceAgent() {
           break;
         case "error":
           console.error("Server error:", msg.text);
+          stopPlayback();
           setAgentState("idle");
           break;
       }
     },
-    [setSampleRate, setAgentState],
+    [setSampleRate, setAgentState, stopPlayback],
   );
 
   const handleBinary = useCallback(
@@ -124,8 +125,9 @@ export function VoiceAgent() {
     onOpen: () => setConnected(true),
     onClose: () => {
       setConnected(false);
-      setAgentState("idle");
+      stopPlayback();
       stopMicRef.current();
+      setAgentState("idle");
     },
   });
 
