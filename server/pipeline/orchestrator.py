@@ -1,4 +1,5 @@
 import asyncio
+import json
 import logging
 import re
 import time
@@ -8,10 +9,12 @@ from server.stt.base import STTProvider
 from server.llm.base import LLMProvider
 from server.tts.base import TTSProvider
 from server.pipeline.session import ConversationSession
+from server.tools.base import ToolRegistry
 
 logger = logging.getLogger(__name__)
 
 SENTENCE_END = re.compile(r"(?<=[.!?])\s+")
+MAX_TOOL_ROUNDS = 3
 
 
 class Orchestrator:
@@ -24,6 +27,7 @@ class Orchestrator:
         send_json: Callable[[str, dict[str, Any]], Awaitable[None]],
         send_audio: Callable[[bytes], Awaitable[None]],
         send_status: Callable[[str], Awaitable[None]],
+        tool_registry: ToolRegistry | None = None,
     ):
         self._stt = stt
         self._llm = llm
@@ -32,6 +36,7 @@ class Orchestrator:
         self._send_json = send_json
         self._send_audio = send_audio
         self._send_status = send_status
+        self._tool_registry = tool_registry
         self._processing_lock = asyncio.Lock()
         self._response_task: asyncio.Task | None = None
 
@@ -88,6 +93,9 @@ class Orchestrator:
             await self._send_json("error", {"text": "An error occurred while generating a response."})
             await self._send_status("idle")
 
+    async def process_text_input(self, text: str) -> None:
+        self._response_task = asyncio.create_task(self._safe_process_response(text))
+
     async def _process_response(self, user_text: str) -> None:
         async with self._processing_lock:
             t_start = time.perf_counter()
@@ -97,44 +105,71 @@ class Orchestrator:
             await self._send_status("processing")
             self._session.add_user_message(user_text)
 
-            full_response = ""
-            buffer = ""
-            first_llm_token = True
-            first_tts_chunk = True
+            tools = self._tool_registry.get_schemas() if self._tool_registry and len(self._tool_registry) > 0 else None
 
-            async for token in self._llm.stream_chat(
-                self._session.get_messages(),
-                system_prompt=self._session.system_prompt,
-            ):
-                if first_llm_token:
-                    llm_ttfb = time.perf_counter() - t_start
-                    first_llm_token = False
+            llm_measured = False
+            tts_measured = False
 
-                full_response += token
-                buffer += token
+            for _round in range(MAX_TOOL_ROUNDS + 1):
+                full_response = ""
+                tool_calls_result = None
+                buffer = ""
+                first_llm_token = True
 
-                sentences = SENTENCE_END.split(buffer)
-                if len(sentences) > 1:
-                    for sentence in sentences[:-1]:
-                        sentence = sentence.strip()
-                        if sentence:
-                            await self._send_json("agent.text", {"text": sentence})
-                            t_before_tts = time.perf_counter()
-                            await self._synthesize_and_send(sentence)
-                            if first_tts_chunk:
-                                tts_ttfb = time.perf_counter() - t_before_tts
-                                first_tts_chunk = False
-                    buffer = sentences[-1]
+                async for token in self._llm.stream_chat(
+                    self._session.get_messages(),
+                    system_prompt=self._session.system_prompt,
+                    tools=tools,
+                ):
+                    if isinstance(token, dict):
+                        tool_calls_result = token.get("tool_calls")
+                        continue
 
-            if buffer.strip():
-                await self._send_json("agent.text", {"text": buffer.strip()})
-                t_before_tts = time.perf_counter()
-                await self._synthesize_and_send(buffer.strip())
-                if first_tts_chunk:
-                    tts_ttfb = time.perf_counter() - t_before_tts
-                    first_tts_chunk = False
+                    if first_llm_token:
+                        if not llm_measured:
+                            llm_ttfb = time.perf_counter() - t_start
+                            llm_measured = True
+                        first_llm_token = False
 
-            self._session.add_assistant_message(full_response)
+                    full_response += token
+                    buffer += token
+
+                    sentences = SENTENCE_END.split(buffer)
+                    if len(sentences) > 1:
+                        for sentence in sentences[:-1]:
+                            sentence = sentence.strip()
+                            if sentence:
+                                await self._send_json("agent.text", {"text": sentence})
+                                t_before_tts = time.perf_counter()
+                                await self._synthesize_and_send(sentence)
+                                if not tts_measured:
+                                    tts_ttfb = time.perf_counter() - t_before_tts
+                                    tts_measured = True
+                        buffer = sentences[-1]
+
+                if buffer.strip():
+                    await self._send_json("agent.text", {"text": buffer.strip()})
+                    t_before_tts = time.perf_counter()
+                    await self._synthesize_and_send(buffer.strip())
+                    if not tts_measured:
+                        tts_ttfb = time.perf_counter() - t_before_tts
+                        tts_measured = True
+
+                if not tool_calls_result:
+                    self._session.add_assistant_message(full_response)
+                    break
+
+                self._session.add_assistant_tool_calls(full_response, tool_calls_result)
+                await self._execute_tool_calls(tool_calls_result)
+            else:
+                logger.warning("Tool loop exhausted after %d rounds", MAX_TOOL_ROUNDS)
+                self._session.add_assistant_message(
+                    full_response or "I ran into a limit processing that request. Let me know if you'd like me to try again."
+                )
+                if not full_response:
+                    await self._send_json("agent.text", {
+                        "text": "I ran into a limit processing that request. Let me know if you'd like me to try again.",
+                    })
 
             total = time.perf_counter() - t_start
             await self._send_json("metrics", {
@@ -143,6 +178,51 @@ class Orchestrator:
                 "total_ms": round(total * 1000),
             })
             await self._send_status("idle")
+
+    async def _execute_tool_calls(self, tool_calls: list[dict]) -> None:
+        if not self._tool_registry:
+            return
+        for tc in tool_calls:
+            fn = tc.get("function", {})
+            name = fn.get("name", "")
+            tc_id = tc.get("id", "")
+            try:
+                args = json.loads(fn.get("arguments", "{}"))
+            except json.JSONDecodeError:
+                args = {}
+
+            await self._send_json("tool_call.start", {"name": name, "arguments": args})
+
+            tool = self._tool_registry.get(name)
+            if not tool:
+                result = {"error": f"Unknown tool: {name}"}
+            else:
+                try:
+                    result = await tool.execute(**args)
+                except Exception as exc:
+                    logger.exception("Tool %s failed", name)
+                    result = {"error": str(exc)}
+
+            success = "error" not in result
+            summary = self._summarize_tool_result(name, result)
+            await self._send_json("tool_call.result", {
+                "name": name,
+                "success": success,
+                "summary": summary,
+            })
+            self._session.add_tool_result(tc_id, name, result)
+
+    @staticmethod
+    def _summarize_tool_result(name: str, result: dict) -> str:
+        if "error" in result:
+            return f"Error: {result['error']}"
+        if name == "search_contacts":
+            total = result.get("total", 0)
+            return f"Found {total} contact{'s' if total != 1 else ''}"
+        try:
+            return json.dumps(result)[:200]
+        except (TypeError, ValueError):
+            return str(result)[:200]
 
     async def _synthesize_and_send(self, text: str) -> None:
         started = False

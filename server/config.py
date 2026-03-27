@@ -14,6 +14,8 @@ class Settings(BaseSettings):
     tts_fallback_chain: str = "groq,elevenlabs"
     host: str = "0.0.0.0"
     port: int = 8000
+    ghl_api_key: str = ""
+    ghl_location_id: str = ""
     cors_origins: str = "http://localhost:3000"
 
     model_config = {"env_file": ".env", "env_file_encoding": "utf-8"}

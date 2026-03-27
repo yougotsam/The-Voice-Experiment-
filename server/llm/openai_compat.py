@@ -1,5 +1,6 @@
+import json
 import logging
-from typing import AsyncIterator
+from typing import Any, AsyncIterator
 
 from openai import AsyncOpenAI
 
@@ -15,24 +16,60 @@ class OpenAICompatLLM(LLMProvider):
 
     async def stream_chat(
         self,
-        messages: list[dict[str, str]],
+        messages: list[dict],
         system_prompt: str = "",
-    ) -> AsyncIterator[str]:
+        tools: list[dict] | None = None,
+    ) -> AsyncIterator[str | dict[str, Any]]:
         full_messages = []
         if system_prompt:
             full_messages.append({"role": "system", "content": system_prompt})
         full_messages.extend(messages)
-        stream = await self._client.chat.completions.create(
+
+        kwargs: dict[str, Any] = dict(
             model=self._model,
             messages=full_messages,
             stream=True,
             max_tokens=1024,
             temperature=0.7,
         )
+        if tools:
+            kwargs["tools"] = tools
+            kwargs["tool_choice"] = "auto"
+
+        stream = await self._client.chat.completions.create(**kwargs)
+
+        tool_calls_accum: dict[int, dict[str, str]] = {}
+
         async for chunk in stream:
             if not chunk.choices:
                 logger.debug("Stream chunk with no choices: %r", chunk)
                 continue
             delta = chunk.choices[0].delta
+
             if delta.content:
                 yield delta.content
+
+            if delta.tool_calls:
+                for tc in delta.tool_calls:
+                    idx = tc.index
+                    if idx not in tool_calls_accum:
+                        tool_calls_accum[idx] = {"id": "", "name": "", "arguments": ""}
+                    if tc.id:
+                        tool_calls_accum[idx]["id"] = tc.id
+                    if tc.function:
+                        if tc.function.name:
+                            tool_calls_accum[idx]["name"] = tc.function.name
+                        if tc.function.arguments:
+                            tool_calls_accum[idx]["arguments"] += tc.function.arguments
+
+        if tool_calls_accum:
+            yield {
+                "tool_calls": [
+                    {
+                        "id": tc["id"],
+                        "type": "function",
+                        "function": {"name": tc["name"], "arguments": tc["arguments"]},
+                    }
+                    for tc in tool_calls_accum.values()
+                ]
+            }

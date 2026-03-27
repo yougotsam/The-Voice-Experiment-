@@ -1,4 +1,6 @@
+import json
 import time
+from typing import Any
 
 DEFAULT_SYSTEM_PROMPT = (
     "You are Zeebs -- an elite AI strategist, creative partner, and closer "
@@ -15,7 +17,7 @@ DEFAULT_SYSTEM_PROMPT = (
 class ConversationSession:
     def __init__(self, session_id: str):
         self.session_id = session_id
-        self.history: list[dict[str, str]] = []
+        self.history: list[dict[str, Any]] = []
         self.system_prompt: str = DEFAULT_SYSTEM_PROMPT
         self.is_active = False
         self.created_at = time.time()
@@ -26,7 +28,30 @@ class ConversationSession:
     def add_assistant_message(self, text: str) -> None:
         self.history.append({"role": "assistant", "content": text})
 
-    def get_messages(self) -> list[dict[str, str]]:
+    def add_assistant_tool_calls(self, text: str, tool_calls: list[dict]) -> None:
+        msg: dict[str, Any] = {"role": "assistant", "tool_calls": tool_calls}
+        if text:
+            msg["content"] = text
+        else:
+            msg["content"] = None
+        self.history.append(msg)
+
+    def add_tool_result(self, tool_call_id: str, name: str, result: dict) -> None:
+        self.history.append({
+            "role": "tool",
+            "tool_call_id": tool_call_id,
+            "name": name,
+            "content": self._safe_json(result),
+        })
+
+    @staticmethod
+    def _safe_json(data: Any) -> str:
+        try:
+            return json.dumps(data)
+        except (TypeError, ValueError):
+            return str(data)
+
+    def get_messages(self) -> list[dict]:
         return list(self.history[-20:])
 
     def set_persona(self, system_prompt: str) -> None:

@@ -16,6 +16,8 @@ from server.llm.openai_compat import OpenAICompatLLM
 from server.tts.elevenlabs import ElevenLabsTTS
 from server.pipeline.orchestrator import Orchestrator
 from server.pipeline.session import ConversationSession
+from server.tools.base import ToolRegistry
+from server.tools.ghl import GHLContactSearch
 
 logger = logging.getLogger(__name__)
 router = APIRouter()
@@ -79,7 +81,12 @@ async def websocket_endpoint(ws: WebSocket) -> None:
         async def send_status(status: str) -> None:
             await ws.send_text(encode_message(ServerMessageType.STATUS, {"status": status}))
 
-        orchestrator = Orchestrator(stt, llm, tts, session, send_json, send_audio, send_status)
+        tool_registry = ToolRegistry()
+        if settings.ghl_api_key and settings.ghl_location_id:
+            tool_registry.register(GHLContactSearch())
+            logger.info("GHL tools enabled for session %s", session_id)
+
+        orchestrator = Orchestrator(stt, llm, tts, session, send_json, send_audio, send_status, tool_registry)
 
         async def _ping_loop():
             try:
@@ -113,6 +120,10 @@ async def websocket_endpoint(ws: WebSocket) -> None:
                     await orchestrator.stop_listening()
                 elif msg_type == ClientMessageType.INTERRUPT:
                     await orchestrator.interrupt()
+                elif msg_type == ClientMessageType.TEXT:
+                    text = msg.get("text", "").strip()
+                    if text:
+                        await orchestrator.process_text_input(text)
                 elif msg_type == ClientMessageType.CONFIG:
                     system_prompt = msg.get("system_prompt")
                     if system_prompt:
