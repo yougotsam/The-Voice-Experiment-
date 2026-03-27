@@ -11,7 +11,7 @@ logger = logging.getLogger(__name__)
 
 GHL_BASE = "https://services.leadconnectorhq.com"
 
-_PHONE_RE = re.compile(r"^\+?[\d\s\-().]{7,20}$")
+_PHONE_RE = re.compile(r"^\+[1-9]\d{6,14}$")
 _EMAIL_RE = re.compile(r"^[^@\s]+@[^@\s]+\.[^@\s]+$")
 
 _http_client: httpx.AsyncClient | None = None
