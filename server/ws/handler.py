@@ -125,9 +125,8 @@ async def websocket_endpoint(ws: WebSocket) -> None:
                     if text:
                         await orchestrator.process_text_input(text)
                 elif msg_type == ClientMessageType.CONFIG:
-                    system_prompt = msg.get("system_prompt")
-                    if system_prompt:
-                        session.set_persona(system_prompt)
+                    system_prompt = msg.get("system_prompt", "")
+                    session.set_persona(system_prompt)
 
     except WebSocketDisconnect:
         logger.info("WS disconnected: %s", session_id)

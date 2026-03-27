@@ -57,5 +57,5 @@ class ConversationSession:
         return list(self.history[-20:])
 
     def set_persona(self, system_prompt: str) -> None:
-        self.system_prompt = system_prompt
+        self.system_prompt = system_prompt if system_prompt else DEFAULT_SYSTEM_PROMPT
         self.history.clear()
