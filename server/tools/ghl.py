@@ -421,7 +421,8 @@ class GHLSendEmail(Tool):
         if not body:
             return {"error": "Missing required argument: body"}
 
-        html_body = body.replace("\n", "<br>")
+        import html
+        html_body = html.escape(body).replace("\n", "<br>")
 
         client = _get_client()
         resp = await client.post(
