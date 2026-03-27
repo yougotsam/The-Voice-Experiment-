@@ -10,6 +10,10 @@ export type ServerMessage = {
   llm_ttfb_ms?: number;
   tts_ttfb_ms?: number;
   total_ms?: number;
+  name?: string;
+  arguments?: Record<string, unknown>;
+  success?: boolean;
+  summary?: string;
 };
 
 type UseWebSocketOptions = {

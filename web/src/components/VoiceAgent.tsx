@@ -23,6 +23,7 @@ export function VoiceAgent() {
   const [connected, setConnected] = useState(false);
   const [inputMode, setInputMode] = useState<InputMode>("push");
   const [metrics, setMetrics] = useState<Metrics | null>(null);
+  const [textInput, setTextInput] = useState("");
   const agentTextBuffer = useRef("");
   const stateRef = useRef<AgentState>("idle");
   const stuckTimer = useRef<ReturnType<typeof setTimeout> | undefined>(undefined);
@@ -102,6 +103,26 @@ export function VoiceAgent() {
           } else if (msg.status === "listening") {
             setAgentState("listening");
           }
+          break;
+        case "tool_call.start":
+          setEntries((prev) => [
+            ...prev,
+            { role: "tool", text: `Calling ${msg.name}...`, timestamp: Date.now(), toolName: msg.name },
+          ]);
+          break;
+        case "tool_call.result":
+          setEntries((prev) => {
+            const idx = [...prev].reverse().findIndex((e) => e.role === "tool" && e.toolName === msg.name);
+            if (idx === -1) return prev;
+            const realIdx = prev.length - 1 - idx;
+            const updated = [...prev];
+            updated[realIdx] = {
+              ...updated[realIdx],
+              text: msg.summary || "Done",
+              toolSuccess: msg.success,
+            };
+            return updated;
+          });
           break;
         case "error":
           console.error("Server error:", msg.text);
@@ -192,6 +213,24 @@ export function VoiceAgent() {
     },
     [sendJSON],
   );
+
+  const handleTextSubmit = useCallback((e: React.FormEvent) => {
+    e.preventDefault();
+    const text = textInput.trim();
+    if (!text || !connected) return;
+    if (stateRef.current === "speaking" || stateRef.current === "processing") {
+      doInterrupt();
+    }
+    stopPlayback();
+    agentTextBuffer.current = "";
+    setEntries((prev) => [
+      ...prev,
+      { role: "user", text, timestamp: Date.now() },
+    ]);
+    sendJSON({ type: "text", text });
+    setTextInput("");
+    setAgentState("processing");
+  }, [textInput, connected, sendJSON, doInterrupt, stopPlayback, setAgentState]);
 
   const handleModeSwitch = useCallback(() => {
     cleanupActiveSession();
@@ -357,6 +396,33 @@ export function VoiceAgent() {
       </div>
 
       <MetricsOverlay metrics={metrics} />
+
+      <form onSubmit={handleTextSubmit} className="w-full flex gap-2">
+        <input
+          type="text"
+          value={textInput}
+          onChange={(e) => setTextInput(e.target.value)}
+          placeholder="Type a message..."
+          disabled={!connected}
+          className="flex-1 rounded-xl px-4 py-2.5 text-sm text-ivory placeholder:text-ivory/30 outline-none transition-all duration-300 focus:ring-1 focus:ring-gold/30 disabled:opacity-30"
+          style={{
+            background: "rgba(10, 22, 36, 0.6)",
+            border: "1px solid rgba(200, 169, 126, 0.15)",
+          }}
+        />
+        <button
+          type="submit"
+          disabled={!connected || !textInput.trim()}
+          className="rounded-xl px-5 py-2.5 text-[11px] font-medium uppercase tracking-widest transition-all duration-300 hover:bg-gold/10 disabled:opacity-30 disabled:cursor-not-allowed"
+          style={{
+            color: "rgba(244, 240, 234, 0.7)",
+            border: "1px solid rgba(200, 169, 126, 0.2)",
+          }}
+        >
+          Send
+        </button>
+      </form>
+
       <TranscriptPanel entries={entries} partialTranscript={partial} />
     </div>
   );
