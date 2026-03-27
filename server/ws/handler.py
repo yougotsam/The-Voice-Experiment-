@@ -123,7 +123,6 @@ async def websocket_endpoint(ws: WebSocket) -> None:
                 elif msg_type == ClientMessageType.TEXT:
                     text = msg.get("text", "").strip()
                     if text:
-                        await send_json("transcript.final", {"text": text})
                         await orchestrator.process_text_input(text)
                 elif msg_type == ClientMessageType.CONFIG:
                     system_prompt = msg.get("system_prompt")

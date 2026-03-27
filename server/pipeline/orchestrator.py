@@ -161,6 +161,15 @@ class Orchestrator:
 
                 self._session.add_assistant_tool_calls(full_response, tool_calls_result)
                 await self._execute_tool_calls(tool_calls_result)
+            else:
+                logger.warning("Tool loop exhausted after %d rounds", MAX_TOOL_ROUNDS)
+                self._session.add_assistant_message(
+                    full_response or "I ran into a limit processing that request. Let me know if you'd like me to try again."
+                )
+                if not full_response:
+                    await self._send_json("agent.text", {
+                        "text": "I ran into a limit processing that request. Let me know if you'd like me to try again.",
+                    })
 
             total = time.perf_counter() - t_start
             await self._send_json("metrics", {

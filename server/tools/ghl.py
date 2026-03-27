@@ -37,7 +37,9 @@ class GHLContactSearch(Tool):
     }
 
     async def execute(self, **kwargs) -> dict[str, Any]:
-        query = kwargs["query"]
+        query = kwargs.get("query")
+        if not query:
+            return {"error": "Missing required argument: query"}
         async with httpx.AsyncClient(timeout=10.0) as client:
             resp = await client.get(
                 f"{GHL_BASE}/contacts/search",
