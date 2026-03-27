@@ -1,6 +1,6 @@
 "use client";
 
-type AgentState = "idle" | "listening" | "processing" | "speaking";
+import type { AgentState } from "@/types";
 
 type VoiceOrbProps = {
   state: AgentState;
