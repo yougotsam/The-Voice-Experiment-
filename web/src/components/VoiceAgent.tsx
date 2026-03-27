@@ -195,9 +195,10 @@ export function VoiceAgent() {
 
   const handleModeSwitch = useCallback(() => {
     cleanupActiveSession();
+    stopPlayback();
     setAgentState("idle");
     setInputMode((m) => (m === "push" ? "vad" : "push"));
-  }, [cleanupActiveSession, setAgentState]);
+  }, [cleanupActiveSession, stopPlayback, setAgentState]);
 
   useVAD({
     enabled: inputMode === "vad" && connected,
@@ -205,6 +206,7 @@ export function VoiceAgent() {
       if (stateRef.current === "speaking" || stateRef.current === "processing") {
         doInterrupt();
       }
+      stopPlayback();
       agentTextBuffer.current = "";
       await startMic();
       sendJSON({ type: "start" });
