@@ -11,18 +11,18 @@ type MetricsOverlayProps = {
 };
 
 function badge(label: string, value: number) {
-  const color =
+  const { color, borderColor } =
     value < 300
-      ? "rgba(200, 169, 126, 0.7)"
+      ? { color: "rgba(200, 169, 126, 0.7)", borderColor: "rgba(200, 169, 126, 0.2)" }
       : value < 800
-        ? "rgba(226, 198, 157, 0.6)"
-        : "rgba(158, 130, 90, 0.5)";
+        ? { color: "rgba(226, 198, 157, 0.6)", borderColor: "rgba(226, 198, 157, 0.2)" }
+        : { color: "rgba(158, 130, 90, 0.5)", borderColor: "rgba(158, 130, 90, 0.2)" };
   return (
     <span
       className="inline-flex items-center gap-1.5 rounded-full px-3 py-1 text-[10px] font-mono tracking-wide"
       style={{
         color,
-        border: `1px solid ${color.replace(/[\d.]+\)$/, "0.2)")}`,
+        border: `1px solid ${borderColor}`,
         background: "rgba(10, 22, 36, 0.4)",
       }}
     >

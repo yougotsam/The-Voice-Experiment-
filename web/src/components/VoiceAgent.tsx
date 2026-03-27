@@ -289,6 +289,18 @@ export function VoiceAgent() {
               onMouseLeave={handleRelease}
               onTouchStart={handlePushToTalk}
               onTouchEnd={handleRelease}
+              onKeyDown={(e) => {
+                if (e.key === " " || e.key === "Enter") {
+                  e.preventDefault();
+                  handlePushToTalk();
+                }
+              }}
+              onKeyUp={(e) => {
+                if (e.key === " " || e.key === "Enter") {
+                  e.preventDefault();
+                  handleRelease();
+                }
+              }}
               disabled={!connected}
               className={`relative h-36 w-36 rounded-full flex flex-col items-center justify-center gap-2 transition-all duration-500 cursor-pointer select-none ${cfg.orbColor} ${cfg.animate} disabled:opacity-30 disabled:cursor-not-allowed`}
               style={{
