@@ -257,6 +257,13 @@ class Orchestrator:
         if name == "search_contacts":
             total = result.get("total", 0)
             return f"Found {total} contact{'s' if total != 1 else ''}"
+        if name == "draft_content":
+            return f"Draft ready: {result.get('draft_type', 'content')} on \"{result.get('topic', '')}\""
+        if name == "get_calendar_events":
+            total = result.get("total", 0)
+            return f"Found {total} event{'s' if total != 1 else ''}"
+        if name == "move_opportunity":
+            return f"Moved \"{result.get('name', 'opportunity')}\" to {result.get('stage', 'new stage')}"
         try:
             return json.dumps(result)[:200]
         except (TypeError, ValueError):
@@ -264,8 +271,9 @@ class Orchestrator:
 
     async def _synthesize_and_send(self, text: str) -> None:
         started = False
+        voice_id = self._session.persona.voice_id
         try:
-            async for audio_chunk in self._tts.synthesize(text):
+            async for audio_chunk in self._tts.synthesize(text, voice_id=voice_id):
                 if not started:
                     await self._send_json("agent.audio.start", {"sample_rate": self._tts.sample_rate})
                     started = True

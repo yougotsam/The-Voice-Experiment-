@@ -24,7 +24,9 @@ class PiperTTS(TTSProvider):
         self.sample_rate = self._voice.config.sample_rate
         logger.info("Piper TTS loaded: %s (sample_rate=%d)", model, self.sample_rate)
 
-    async def synthesize(self, text: str) -> AsyncIterator[bytes]:
+    async def synthesize(self, text: str, voice_id: str = "") -> AsyncIterator[bytes]:
+        if voice_id:
+            logger.debug("Piper TTS does not support per-request voice_id, using loaded model")
         loop = asyncio.get_running_loop()
         audio = await loop.run_in_executor(None, self._generate_sync, text)
         yield audio

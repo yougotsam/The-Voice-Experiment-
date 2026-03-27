@@ -14,6 +14,8 @@ export type ServerMessage = {
   arguments?: Record<string, unknown>;
   success?: boolean;
   summary?: string;
+  persona_id?: string;
+  greeting?: string;
 };
 
 type UseWebSocketOptions = {

@@ -18,10 +18,11 @@ class ElevenLabsTTS(TTSProvider):
         self._api_key = api_key
         self._voice_id = voice_id
 
-    async def synthesize(self, text: str) -> AsyncIterator[bytes]:
+    async def synthesize(self, text: str, voice_id: str = "") -> AsyncIterator[bytes]:
         if not self._api_key:
             raise RuntimeError("ElevenLabs API key not configured")
-        url = ELEVENLABS_WS_URL.format(voice_id=self._voice_id)
+        active_voice = voice_id or self._voice_id
+        url = ELEVENLABS_WS_URL.format(voice_id=active_voice)
         params = (
             f"?model_id=eleven_turbo_v2_5"
             f"&output_format=pcm_24000"

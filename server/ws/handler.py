@@ -18,13 +18,12 @@ from server.tts.elevenlabs import ElevenLabsTTS
 from server.pipeline.orchestrator import Orchestrator
 from server.pipeline.session import ConversationSession
 from server.tools.base import ToolRegistry
-from server.tools.ghl import GHLContactSearch
+from server.tools.ghl import GHLContactSearch, GHLDraftContent, GHLGetCalendarEvents, GHLMoveOpportunity
 
 logger = logging.getLogger(__name__)
 router = APIRouter()
 
 MAX_TEXT_LENGTH = 2000
-MAX_SYSTEM_PROMPT_LENGTH = 2000
 
 
 def _create_single_tts(provider: str):
@@ -86,8 +85,11 @@ async def websocket_endpoint(ws: WebSocket) -> None:
             await ws.send_text(encode_message(ServerMessageType.STATUS, {"status": status}))
 
         tool_registry = ToolRegistry()
+        tool_registry.register(GHLDraftContent())
         if settings.ghl_api_key and settings.ghl_location_id:
             tool_registry.register(GHLContactSearch())
+            tool_registry.register(GHLGetCalendarEvents())
+            tool_registry.register(GHLMoveOpportunity())
             logger.info("GHL tools enabled for session %s", session_id)
 
         orchestrator = Orchestrator(stt, llm, tts, session, send_json, send_audio, send_status, tool_registry)
@@ -133,8 +135,16 @@ async def websocket_endpoint(ws: WebSocket) -> None:
                     if text:
                         await orchestrator.process_text_input(text)
                 elif msg_type == ClientMessageType.CONFIG:
-                    system_prompt = msg.get("system_prompt", "")[:MAX_SYSTEM_PROMPT_LENGTH]
-                    session.set_persona(system_prompt)
+                    persona_id = msg.get("persona_id", "default")
+                    if orchestrator:
+                        await orchestrator.interrupt()
+                    session.set_persona(persona_id)
+                    await send_json(ServerMessageType.PERSONA_LOADED.value, {
+                        "persona_id": session.persona.id,
+                        "name": session.persona.name,
+                        "greeting": session.persona.greeting,
+                    })
+                    await send_status("idle")
 
     except WebSocketDisconnect:
         logger.info("WS disconnected: %s", session_id)
