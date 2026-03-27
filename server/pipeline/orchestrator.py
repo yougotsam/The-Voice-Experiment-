@@ -210,7 +210,10 @@ class Orchestrator:
         if name == "search_contacts":
             total = result.get("total", 0)
             return f"Found {total} contact{'s' if total != 1 else ''}"
-        return json.dumps(result)[:200]
+        try:
+            return json.dumps(result)[:200]
+        except (TypeError, ValueError):
+            return str(result)[:200]
 
     async def _synthesize_and_send(self, text: str) -> None:
         started = False

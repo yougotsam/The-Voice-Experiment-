@@ -49,7 +49,9 @@ export function TranscriptPanel({
               style={{
                 background:
                   entry.role === "tool"
-                    ? entry.toolSuccess ? "rgba(74, 222, 128, 0.6)" : "rgba(248, 113, 113, 0.6)"
+                    ? entry.toolSuccess === true ? "rgba(74, 222, 128, 0.6)"
+                      : entry.toolSuccess === false ? "rgba(248, 113, 113, 0.6)"
+                      : "rgba(200, 169, 126, 0.4)"
                     : entry.role === "user"
                       ? "rgba(200, 169, 126, 0.6)"
                       : "rgba(244, 240, 234, 0.3)",
@@ -61,7 +63,9 @@ export function TranscriptPanel({
                 style={{
                   color:
                     entry.role === "tool"
-                      ? "rgba(74, 222, 128, 0.7)"
+                      ? entry.toolSuccess === true ? "rgba(74, 222, 128, 0.7)"
+                        : entry.toolSuccess === false ? "rgba(248, 113, 113, 0.7)"
+                        : "rgba(200, 169, 126, 0.6)"
                       : entry.role === "user"
                         ? "rgba(200, 169, 126, 0.7)"
                         : "rgba(244, 240, 234, 0.35)",
@@ -74,7 +78,9 @@ export function TranscriptPanel({
                 style={{
                   color:
                     entry.role === "tool"
-                      ? "rgba(74, 222, 128, 0.7)"
+                      ? entry.toolSuccess === true ? "rgba(74, 222, 128, 0.7)"
+                        : entry.toolSuccess === false ? "rgba(248, 113, 113, 0.7)"
+                        : "rgba(244, 240, 234, 0.5)"
                       : entry.role === "user"
                         ? "rgba(244, 240, 234, 0.85)"
                         : "rgba(244, 240, 234, 0.7)",

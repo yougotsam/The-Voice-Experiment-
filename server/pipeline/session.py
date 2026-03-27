@@ -41,8 +41,15 @@ class ConversationSession:
             "role": "tool",
             "tool_call_id": tool_call_id,
             "name": name,
-            "content": json.dumps(result),
+            "content": self._safe_json(result),
         })
+
+    @staticmethod
+    def _safe_json(data: Any) -> str:
+        try:
+            return json.dumps(data)
+        except (TypeError, ValueError):
+            return str(data)
 
     def get_messages(self) -> list[dict]:
         return list(self.history[-20:])
