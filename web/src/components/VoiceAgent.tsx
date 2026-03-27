@@ -15,6 +15,8 @@ type Metrics = { llm_ttfb_ms: number; tts_ttfb_ms: number; total_ms: number };
 
 const WS_URL = process.env.NEXT_PUBLIC_WS_URL || "ws://localhost:8000/ws";
 const STUCK_TIMEOUT_MS = 30000;
+const MAX_ENTRIES = 200;
+const MAX_TEXT_INPUT = 2000;
 
 export function VoiceAgent() {
   const [state, setState] = useState<AgentState>("idle");
@@ -25,6 +27,15 @@ export function VoiceAgent() {
   const [metrics, setMetrics] = useState<Metrics | null>(null);
   const [textInput, setTextInput] = useState("");
   const agentTextBuffer = useRef("");
+  const cappedSetEntries = useCallback(
+    (updater: (prev: TranscriptEntry[]) => TranscriptEntry[]) => {
+      setEntries((prev) => {
+        const next = updater(prev);
+        return next.length > MAX_ENTRIES ? next.slice(-MAX_ENTRIES) : next;
+      });
+    },
+    [],
+  );
   const stateRef = useRef<AgentState>("idle");
   const stuckTimer = useRef<ReturnType<typeof setTimeout> | undefined>(undefined);
 
@@ -63,7 +74,7 @@ export function VoiceAgent() {
         case "transcript.final":
           setPartial("");
           if (msg.text) {
-            setEntries((prev) => [
+            cappedSetEntries((prev) => [
               ...prev,
               { role: "user", text: msg.text!, timestamp: Date.now() },
             ]);
@@ -71,7 +82,7 @@ export function VoiceAgent() {
           break;
         case "agent.text":
           agentTextBuffer.current += (agentTextBuffer.current ? " " : "") + (msg.text || "");
-          setEntries((prev) => {
+          cappedSetEntries((prev) => {
             const last = prev[prev.length - 1];
             if (last?.role === "agent") {
               return [
@@ -105,13 +116,13 @@ export function VoiceAgent() {
           }
           break;
         case "tool_call.start":
-          setEntries((prev) => [
+          cappedSetEntries((prev) => [
             ...prev,
             { role: "tool", text: `Calling ${msg.name}...`, timestamp: Date.now(), toolName: msg.name },
           ]);
           break;
         case "tool_call.result":
-          setEntries((prev) => {
+          cappedSetEntries((prev) => {
             const idx = [...prev].reverse().findIndex((e) => e.role === "tool" && e.toolName === msg.name);
             if (idx === -1) return prev;
             const realIdx = prev.length - 1 - idx;
@@ -131,7 +142,7 @@ export function VoiceAgent() {
           break;
       }
     },
-    [setSampleRate, setAgentState, stopPlayback],
+    [setSampleRate, setAgentState, stopPlayback, cappedSetEntries],
   );
 
   const handleBinary = useCallback(
@@ -216,21 +227,21 @@ export function VoiceAgent() {
 
   const handleTextSubmit = useCallback((e: React.FormEvent) => {
     e.preventDefault();
-    const text = textInput.trim();
+    const text = textInput.trim().slice(0, MAX_TEXT_INPUT);
     if (!text || !connected) return;
     if (stateRef.current === "speaking" || stateRef.current === "processing") {
       doInterrupt();
     }
     stopPlayback();
     agentTextBuffer.current = "";
-    setEntries((prev) => [
+    cappedSetEntries((prev) => [
       ...prev,
       { role: "user", text, timestamp: Date.now() },
     ]);
     sendJSON({ type: "text", text });
     setTextInput("");
     setAgentState("processing");
-  }, [textInput, connected, sendJSON, doInterrupt, stopPlayback, setAgentState]);
+  }, [textInput, connected, sendJSON, doInterrupt, stopPlayback, setAgentState, cappedSetEntries]);
 
   const handleModeSwitch = useCallback(() => {
     cleanupActiveSession();
@@ -403,6 +414,7 @@ export function VoiceAgent() {
           value={textInput}
           onChange={(e) => setTextInput(e.target.value)}
           placeholder="Type a message..."
+          maxLength={MAX_TEXT_INPUT}
           disabled={!connected}
           className="flex-1 rounded-xl px-4 py-2.5 text-sm text-ivory placeholder:text-ivory/30 outline-none transition-all duration-300 focus:ring-1 focus:ring-gold/30 disabled:opacity-30"
           style={{

@@ -2,16 +2,19 @@ import json
 import logging
 from typing import Any, AsyncIterator
 
+import httpx
 from openai import AsyncOpenAI
 
 from server.llm.base import LLMProvider
 
 logger = logging.getLogger(__name__)
 
+LLM_TIMEOUT = httpx.Timeout(connect=10.0, read=60.0, write=10.0, pool=10.0)
+
 
 class OpenAICompatLLM(LLMProvider):
     def __init__(self, api_key: str, base_url: str, model: str):
-        self._client = AsyncOpenAI(api_key=api_key, base_url=base_url)
+        self._client = AsyncOpenAI(api_key=api_key, base_url=base_url, timeout=LLM_TIMEOUT)
         self._model = model
 
     async def stream_chat(

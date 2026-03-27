@@ -53,7 +53,11 @@ class ConversationSession:
         except (TypeError, ValueError):
             return str(data)
 
+    MAX_HISTORY = 40
+
     def get_messages(self) -> list[dict]:
+        if len(self.history) > self.MAX_HISTORY:
+            self.history = self.history[-self.MAX_HISTORY:]
         return list(self.history[-20:])
 
     def set_persona(self, system_prompt: str) -> None:

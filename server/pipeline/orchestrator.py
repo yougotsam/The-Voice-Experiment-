@@ -220,9 +220,9 @@ class Orchestrator:
             else:
                 try:
                     result = await tool.execute(**args)
-                except Exception as exc:
+                except Exception:
                     logger.exception("Tool %s failed", name)
-                    result = {"error": str(exc)}
+                    result = {"error": f"Tool '{name}' encountered an internal error."}
 
             success = "error" not in result
             summary = self._summarize_tool_result(name, result)

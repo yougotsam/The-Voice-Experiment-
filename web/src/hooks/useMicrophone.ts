@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useRef, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 
 const TARGET_SAMPLE_RATE = 16000;
 const BUFFER_SIZE = 1600; // 100ms at 16kHz
@@ -11,7 +11,21 @@ export function useMicrophone(onAudioChunk: (pcm16: ArrayBuffer) => void) {
   const streamRef = useRef<MediaStream | null>(null);
   const workletRef = useRef<AudioWorkletNode | null>(null);
 
+  const cleanup = useCallback(() => {
+    workletRef.current?.disconnect();
+    streamRef.current?.getTracks().forEach((t) => t.stop());
+    contextRef.current?.close();
+    workletRef.current = null;
+    streamRef.current = null;
+    contextRef.current = null;
+    setActive(false);
+  }, []);
+
   const start = useCallback(async () => {
+    if (contextRef.current) {
+      cleanup();
+    }
+
     const stream = await navigator.mediaDevices.getUserMedia({
       audio: {
         sampleRate: TARGET_SAMPLE_RATE,
@@ -49,17 +63,11 @@ export function useMicrophone(onAudioChunk: (pcm16: ArrayBuffer) => void) {
     streamRef.current = stream;
     workletRef.current = worklet;
     setActive(true);
-  }, [onAudioChunk]);
+  }, [onAudioChunk, cleanup]);
 
-  const stop = useCallback(() => {
-    workletRef.current?.disconnect();
-    streamRef.current?.getTracks().forEach((t) => t.stop());
-    contextRef.current?.close();
-    workletRef.current = null;
-    streamRef.current = null;
-    contextRef.current = null;
-    setActive(false);
-  }, []);
+  useEffect(() => {
+    return cleanup;
+  }, [cleanup]);
 
-  return { active, start, stop };
+  return { active, start, stop: cleanup };
 }

@@ -17,8 +17,8 @@ app.add_middleware(
     CORSMiddleware,
     allow_origins=settings.cors_origins.split(","),
     allow_credentials=True,
-    allow_methods=["*"],
-    allow_headers=["*"],
+    allow_methods=["GET", "POST", "OPTIONS"],
+    allow_headers=["Content-Type", "Authorization"],
 )
 
 app.include_router(ws_router)
@@ -26,11 +26,7 @@ app.include_router(ws_router)
 
 @app.get("/health")
 async def health():
-    return {
-        "status": "ok",
-        "tts_provider": settings.tts_provider,
-        "llm_model": settings.llm_model,
-    }
+    return {"status": "ok"}
 
 
 if __name__ == "__main__":
