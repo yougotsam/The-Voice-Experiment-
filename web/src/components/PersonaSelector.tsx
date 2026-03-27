@@ -57,16 +57,26 @@ export function PersonaSelector({ onSelect }: PersonaSelectorProps) {
   );
 
   return (
-    <div className="mb-6 flex flex-wrap justify-center gap-2">
+    <div className="flex flex-wrap justify-center gap-2">
       {PERSONAS.map((p) => (
         <button
           key={p.id}
           onClick={() => handleSelect(p)}
-          className={`rounded-full px-3 py-1 text-xs font-medium transition-colors ${
+          className="rounded-full px-3.5 py-1.5 text-[11px] font-medium tracking-wide transition-all duration-300"
+          style={
             active === p.id
-              ? "bg-blue-600 text-white"
-              : "bg-gray-800 text-gray-400 hover:bg-gray-700 hover:text-gray-200"
-          }`}
+              ? {
+                  color: "#E2C69D",
+                  background: "rgba(200, 169, 126, 0.12)",
+                  border: "1px solid rgba(200, 169, 126, 0.3)",
+                  boxShadow: "0 0 12px rgba(200, 169, 126, 0.1)",
+                }
+              : {
+                  color: "rgba(244, 240, 234, 0.35)",
+                  background: "transparent",
+                  border: "1px solid rgba(200, 169, 126, 0.08)",
+                }
+          }
         >
           {p.name}
         </button>

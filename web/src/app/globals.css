@@ -1,1 +1,68 @@
+@import url('https://fonts.googleapis.com/css2?family=Cormorant+Garamond:wght@400;500;600;700&family=Inter:wght@300;400;500;600&display=swap');
 @import "tailwindcss";
+
+@theme {
+  --color-midnight: #08121C;
+  --color-slate-navy: #0A1624;
+  --color-obsidian: #050A10;
+  --color-twilight: #122236;
+  --color-gold: #C8A97E;
+  --color-gold-light: #E2C69D;
+  --color-gold-pale: #DDC197;
+  --color-gold-muted: #9E825A;
+  --color-ivory: #F4F0EA;
+  --font-heading: 'Cormorant Garamond', serif;
+  --font-body: 'Inter', sans-serif;
+}
+
+body {
+  background: radial-gradient(ellipse at 50% 0%, #122236 0%, #08121C 50%, #050A10 100%);
+  min-height: 100vh;
+  font-family: var(--font-body);
+  color: #F4F0EA;
+}
+
+@keyframes pulse-ring {
+  0% { transform: scale(1); opacity: 0.6; }
+  50% { transform: scale(1.15); opacity: 0.2; }
+  100% { transform: scale(1); opacity: 0.6; }
+}
+
+@keyframes breathe {
+  0%, 100% { transform: scale(1); }
+  50% { transform: scale(1.03); }
+}
+
+@keyframes glow-pulse {
+  0%, 100% { box-shadow: 0 0 20px rgba(200, 169, 126, 0.15); }
+  50% { box-shadow: 0 0 40px rgba(200, 169, 126, 0.3); }
+}
+
+.animate-pulse-ring {
+  animation: pulse-ring 2s ease-in-out infinite;
+}
+
+.animate-breathe {
+  animation: breathe 3s ease-in-out infinite;
+}
+
+.animate-glow-pulse {
+  animation: glow-pulse 2s ease-in-out infinite;
+}
+
+::-webkit-scrollbar {
+  width: 4px;
+}
+
+::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+::-webkit-scrollbar-thumb {
+  background: rgba(200, 169, 126, 0.2);
+  border-radius: 2px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: rgba(200, 169, 126, 0.4);
+}
