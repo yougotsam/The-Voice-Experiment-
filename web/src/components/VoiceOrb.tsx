@@ -122,6 +122,9 @@ export function VoiceOrb({ state, label, connected, inputMode, onPushStart, onPu
   if (inputMode === "push") {
     return (
       <button
+        type="button"
+        aria-label={`Voice orb: ${label}`}
+        aria-pressed={state === "listening"}
         onMouseDown={onPushStart}
         onMouseUp={onPushEnd}
         onMouseLeave={onPushEnd}
@@ -148,6 +151,8 @@ export function VoiceOrb({ state, label, connected, inputMode, onPushStart, onPu
 
   return (
     <div
+      role="status"
+      aria-label={`Voice orb: ${label}`}
       className={`relative h-40 w-40 rounded-full flex items-center justify-center transition-all duration-500 ${orbAnimClass}`}
       style={{
         background: "radial-gradient(circle at 50% 40%, rgba(18,34,54,0.9) 0%, rgba(8,18,28,0.95) 100%)",
