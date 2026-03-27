@@ -139,7 +139,7 @@ async def websocket_endpoint(ws: WebSocket) -> None:
                     if orchestrator:
                         await orchestrator.interrupt()
                     session.set_persona(persona_id)
-                    await send_json("persona.loaded", {
+                    await send_json(ServerMessageType.PERSONA_LOADED.value, {
                         "persona_id": session.persona.id,
                         "name": session.persona.name,
                         "greeting": session.persona.greeting,
