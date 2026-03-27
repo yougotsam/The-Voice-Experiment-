@@ -145,9 +145,9 @@ class GHLGetCalendarEvents(Tool):
     }
 
     async def execute(self, **kwargs) -> dict[str, Any]:
-        from datetime import datetime, timedelta
+        from datetime import datetime, timedelta, timezone
 
-        now_str = datetime.utcnow().strftime("%Y-%m-%d")
+        now_str = datetime.now(timezone.utc).strftime("%Y-%m-%d")
         start = kwargs.get("start_date", now_str)
         end = kwargs.get("end_date")
 

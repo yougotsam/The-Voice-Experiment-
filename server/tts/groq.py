@@ -22,6 +22,8 @@ class GroqTTS(TTSProvider):
         self._client = httpx.AsyncClient(timeout=30.0)
 
     async def synthesize(self, text: str, voice_id: str = "") -> AsyncIterator[bytes]:
+        if voice_id:
+            logger.debug("Groq TTS does not support per-request voice_id, using default '%s'", self._voice)
         payload = {
             "model": self._model,
             "input": text,
