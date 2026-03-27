@@ -21,11 +21,11 @@ class FallbackTTS(TTSProvider):
     def sample_rate(self, value: int) -> None:
         self._providers[self._active_index].sample_rate = value
 
-    async def synthesize(self, text: str) -> AsyncIterator[bytes]:
+    async def synthesize(self, text: str, voice_id: str = "") -> AsyncIterator[bytes]:
         for i, provider in enumerate(self._providers):
             started = False
             try:
-                async for chunk in provider.synthesize(text):
+                async for chunk in provider.synthesize(text, voice_id=voice_id):
                     started = True
                     self._active_index = i
                     yield chunk

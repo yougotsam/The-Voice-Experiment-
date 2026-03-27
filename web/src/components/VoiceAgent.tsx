@@ -135,6 +135,15 @@ export function VoiceAgent() {
             return updated;
           });
           break;
+        case "persona.loaded":
+          if (msg.greeting) {
+            const greetingText = msg.greeting;
+            cappedSetEntries((prev) => [
+              ...prev,
+              { role: "agent", text: greetingText, timestamp: Date.now() },
+            ]);
+          }
+          break;
         case "error":
           console.error("Server error:", msg.text);
           stopPlayback();
@@ -217,12 +226,16 @@ export function VoiceAgent() {
   }, [stopMic, sendJSON, setAgentState]);
 
   const handlePersona = useCallback(
-    (systemPrompt: string) => {
-      sendJSON({ type: "config", system_prompt: systemPrompt });
+    (personaId: string) => {
+      cleanupActiveSession();
+      stopPlayback();
+      agentTextBuffer.current = "";
+      setAgentState("idle");
+      sendJSON({ type: "config", persona_id: personaId });
       setEntries([]);
       setMetrics(null);
     },
-    [sendJSON],
+    [sendJSON, cleanupActiveSession, stopPlayback, setAgentState],
   );
 
   const handleTextSubmit = useCallback((e: React.FormEvent) => {

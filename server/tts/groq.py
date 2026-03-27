@@ -21,7 +21,7 @@ class GroqTTS(TTSProvider):
         self._model = model
         self._client = httpx.AsyncClient(timeout=30.0)
 
-    async def synthesize(self, text: str) -> AsyncIterator[bytes]:
+    async def synthesize(self, text: str, voice_id: str = "") -> AsyncIterator[bytes]:
         payload = {
             "model": self._model,
             "input": text,

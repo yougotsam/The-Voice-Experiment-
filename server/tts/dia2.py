@@ -40,7 +40,7 @@ class Dia2TTS(TTSProvider):
     def __init__(self):
         self._speaker_tag = "[S1]"
 
-    async def synthesize(self, text: str) -> AsyncIterator[bytes]:
+    async def synthesize(self, text: str, voice_id: str = "") -> AsyncIterator[bytes]:
         loop = asyncio.get_running_loop()
         audio_bytes = await loop.run_in_executor(None, self._generate_sync, text)
         yield audio_bytes

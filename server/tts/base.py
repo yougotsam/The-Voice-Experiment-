@@ -6,7 +6,7 @@ class TTSProvider(ABC):
     sample_rate: int = 24000
 
     @abstractmethod
-    async def synthesize(self, text: str) -> AsyncIterator[bytes]: ...
+    async def synthesize(self, text: str, voice_id: str = "") -> AsyncIterator[bytes]: ...
 
     async def close(self) -> None:
         pass
