@@ -75,7 +75,7 @@ class GHLContactSearch(Tool):
                 "phone": c.get("phone"),
                 "tags": c.get("tags", []),
             })
-        return {"contacts": results, "total": len(contacts)}
+        return {"contacts": results, "total": len(contacts), "returned": len(results)}
 
 
 class GHLDraftContent(Tool):
@@ -147,10 +147,22 @@ class GHLGetCalendarEvents(Tool):
     async def execute(self, **kwargs) -> dict[str, Any]:
         from datetime import datetime, timedelta
 
-        start = kwargs.get("start_date", datetime.utcnow().strftime("%Y-%m-%d"))
+        now_str = datetime.utcnow().strftime("%Y-%m-%d")
+        start = kwargs.get("start_date", now_str)
         end = kwargs.get("end_date")
-        if not end:
-            end = (datetime.strptime(start, "%Y-%m-%d") + timedelta(days=7)).strftime("%Y-%m-%d")
+
+        try:
+            start_dt = datetime.strptime(start, "%Y-%m-%d")
+        except ValueError:
+            return {"error": f"Invalid start_date format: '{start}'. Use YYYY-MM-DD."}
+
+        if end:
+            try:
+                datetime.strptime(end, "%Y-%m-%d")
+            except ValueError:
+                return {"error": f"Invalid end_date format: '{end}'. Use YYYY-MM-DD."}
+        else:
+            end = (start_dt + timedelta(days=7)).strftime("%Y-%m-%d")
 
         client = _get_client()
         resp = await client.get(
@@ -177,7 +189,7 @@ class GHLGetCalendarEvents(Tool):
                 "status": ev.get("status"),
                 "contact_id": ev.get("contactId"),
             })
-        return {"events": results, "total": len(events)}
+        return {"events": results, "total": len(events), "returned": len(results)}
 
 
 class GHLMoveOpportunity(Tool):
