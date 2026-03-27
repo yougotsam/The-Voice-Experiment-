@@ -17,6 +17,9 @@ DEFAULT_SYSTEM_PROMPT = (
 
 
 class ConversationSession:
+    MAX_STORED_HISTORY = 40
+    MAX_CONTEXT_HISTORY = 20
+
     def __init__(self, session_id: str):
         self.session_id = session_id
         self.history: list[dict[str, Any]] = []
@@ -24,11 +27,17 @@ class ConversationSession:
         self.is_active = False
         self.created_at = time.time()
 
+    def _trim_history(self) -> None:
+        if len(self.history) > self.MAX_STORED_HISTORY:
+            self.history = self.history[-self.MAX_STORED_HISTORY:]
+
     def add_user_message(self, text: str) -> None:
         self.history.append({"role": "user", "content": text})
+        self._trim_history()
 
     def add_assistant_message(self, text: str) -> None:
         self.history.append({"role": "assistant", "content": text})
+        self._trim_history()
 
     def add_assistant_tool_calls(self, text: str, tool_calls: list[dict]) -> None:
         msg: dict[str, Any] = {"role": "assistant", "tool_calls": tool_calls}
@@ -53,12 +62,8 @@ class ConversationSession:
         except (TypeError, ValueError):
             return str(data)
 
-    MAX_HISTORY = 40
-
     def get_messages(self) -> list[dict]:
-        if len(self.history) > self.MAX_HISTORY:
-            self.history = self.history[-self.MAX_HISTORY:]
-        return list(self.history[-20:])
+        return list(self.history[-self.MAX_CONTEXT_HISTORY:])
 
     def set_persona(self, system_prompt: str) -> None:
         self.system_prompt = system_prompt if system_prompt else DEFAULT_SYSTEM_PROMPT
