@@ -10,13 +10,28 @@ logger = logging.getLogger(__name__)
 
 GHL_BASE = "https://services.leadconnectorhq.com"
 
+_http_client: httpx.AsyncClient | None = None
 
-def _ghl_headers() -> dict[str, str]:
-    return {
-        "Authorization": f"Bearer {settings.ghl_api_key}",
-        "Version": "2021-07-28",
-        "Accept": "application/json",
-    }
+
+def _get_client() -> httpx.AsyncClient:
+    global _http_client
+    if _http_client is None or _http_client.is_closed:
+        _http_client = httpx.AsyncClient(
+            timeout=10.0,
+            headers={
+                "Authorization": f"Bearer {settings.ghl_api_key}",
+                "Version": "2021-07-28",
+                "Accept": "application/json",
+            },
+        )
+    return _http_client
+
+
+async def close_ghl_client() -> None:
+    global _http_client
+    if _http_client is not None and not _http_client.is_closed:
+        await _http_client.aclose()
+        _http_client = None
 
 
 class GHLContactSearch(Tool):
@@ -40,16 +55,15 @@ class GHLContactSearch(Tool):
         query = kwargs.get("query")
         if not query:
             return {"error": "Missing required argument: query"}
-        async with httpx.AsyncClient(timeout=10.0) as client:
-            resp = await client.get(
-                f"{GHL_BASE}/contacts/search",
-                headers=_ghl_headers(),
-                params={"locationId": settings.ghl_location_id, "query": query},
-            )
-            if resp.status_code != 200:
-                logger.error("GHL contacts search %s: %s", resp.status_code, resp.text[:300])
-                resp.raise_for_status()
-            data = resp.json()
+        client = _get_client()
+        resp = await client.get(
+            f"{GHL_BASE}/contacts/search",
+            params={"locationId": settings.ghl_location_id, "query": query},
+        )
+        if resp.status_code != 200:
+            logger.error("GHL contacts search %s: %s", resp.status_code, resp.text[:300])
+            resp.raise_for_status()
+        data = resp.json()
 
         contacts = data.get("contacts", [])
         results = []

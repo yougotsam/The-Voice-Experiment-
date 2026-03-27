@@ -44,7 +44,10 @@ export function useWebSocket({
   onOpenRef.current = onOpen;
   onCloseRef.current = onClose;
 
+  const mountedRef = useRef(true);
+
   const connect = useCallback(() => {
+    if (!mountedRef.current) return;
     if (wsRef.current?.readyState === WebSocket.OPEN) return;
 
     const ws = new WebSocket(url);
@@ -79,7 +82,9 @@ export function useWebSocket({
       console.log("[WS] closed — code:", event.code, "reason:", event.reason);
       setConnected(false);
       onCloseRef.current?.();
-      reconnectTimer.current = setTimeout(connect, 2000);
+      if (mountedRef.current) {
+        reconnectTimer.current = setTimeout(connect, 2000);
+      }
     };
 
     ws.onerror = () => {
@@ -91,8 +96,10 @@ export function useWebSocket({
   }, [url]);
 
   useEffect(() => {
+    mountedRef.current = true;
     connect();
     return () => {
+      mountedRef.current = false;
       clearTimeout(reconnectTimer.current);
       wsRef.current?.close();
     };

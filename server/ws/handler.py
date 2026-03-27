@@ -1,4 +1,5 @@
 import asyncio
+import json
 import logging
 import uuid
 
@@ -21,6 +22,9 @@ from server.tools.ghl import GHLContactSearch
 
 logger = logging.getLogger(__name__)
 router = APIRouter()
+
+MAX_TEXT_LENGTH = 2000
+MAX_SYSTEM_PROMPT_LENGTH = 2000
 
 
 def _create_single_tts(provider: str):
@@ -104,7 +108,11 @@ async def websocket_endpoint(ws: WebSocket) -> None:
             if "bytes" in data and data["bytes"]:
                 await orchestrator.feed_audio(data["bytes"])
             elif "text" in data and data["text"]:
-                msg = decode_message(data["text"])
+                try:
+                    msg = decode_message(data["text"])
+                except (json.JSONDecodeError, ValueError):
+                    logger.warning("Malformed JSON from client, ignoring")
+                    continue
                 msg_type = msg.get("type", "")
 
                 if msg_type == ClientMessageType.PONG:
@@ -121,11 +129,11 @@ async def websocket_endpoint(ws: WebSocket) -> None:
                 elif msg_type == ClientMessageType.INTERRUPT:
                     await orchestrator.interrupt()
                 elif msg_type == ClientMessageType.TEXT:
-                    text = msg.get("text", "").strip()
+                    text = msg.get("text", "").strip()[:MAX_TEXT_LENGTH]
                     if text:
                         await orchestrator.process_text_input(text)
                 elif msg_type == ClientMessageType.CONFIG:
-                    system_prompt = msg.get("system_prompt", "")
+                    system_prompt = msg.get("system_prompt", "")[:MAX_SYSTEM_PROMPT_LENGTH]
                     session.set_persona(system_prompt)
 
     except WebSocketDisconnect:
