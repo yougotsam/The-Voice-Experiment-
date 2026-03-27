@@ -11,15 +11,20 @@ type MetricsOverlayProps = {
 };
 
 function badge(label: string, value: number) {
-  const color =
+  const { color, borderColor } =
     value < 300
-      ? "text-green-400 border-green-800"
+      ? { color: "rgba(126, 200, 160, 0.8)", borderColor: "rgba(126, 200, 160, 0.25)" }
       : value < 800
-        ? "text-yellow-400 border-yellow-800"
-        : "text-red-400 border-red-800";
+        ? { color: "rgba(226, 198, 126, 0.8)", borderColor: "rgba(226, 198, 126, 0.25)" }
+        : { color: "rgba(200, 126, 126, 0.7)", borderColor: "rgba(200, 126, 126, 0.2)" };
   return (
     <span
-      className={`inline-flex items-center gap-1 rounded-md border px-2 py-0.5 text-xs font-mono ${color}`}
+      className="inline-flex items-center gap-1.5 rounded-full px-3 py-1 text-[10px] font-mono tracking-wide"
+      style={{
+        color,
+        border: `1px solid ${borderColor}`,
+        background: "rgba(10, 22, 36, 0.4)",
+      }}
     >
       {label}{" "}
       <strong>{value}</strong>ms
@@ -31,7 +36,7 @@ export function MetricsOverlay({ metrics }: MetricsOverlayProps) {
   if (!metrics) return null;
 
   return (
-    <div className="mt-3 flex flex-wrap justify-center gap-2">
+    <div className="flex flex-wrap justify-center gap-2">
       {badge("LLM", metrics.llm_ttfb_ms)}
       {badge("TTS", metrics.tts_ttfb_ms)}
       {badge("Total", metrics.total_ms)}

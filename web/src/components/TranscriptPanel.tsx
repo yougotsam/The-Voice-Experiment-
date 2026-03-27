@@ -23,33 +23,69 @@ export function TranscriptPanel({
     bottomRef.current?.scrollIntoView({ behavior: "smooth" });
   }, [entries, partialTranscript]);
 
+  if (entries.length === 0 && !partialTranscript) return null;
+
   return (
-    <div className="mt-6 w-full max-w-lg rounded-xl border border-gray-800 bg-gray-900/50 p-4">
-      <h2 className="mb-3 text-sm font-medium uppercase tracking-wider text-gray-500">
-        Transcript
+    <div
+      className="w-full rounded-2xl p-5 backdrop-blur-sm"
+      style={{
+        background: "rgba(10, 22, 36, 0.6)",
+        border: "1px solid rgba(200, 169, 126, 0.1)",
+      }}
+    >
+      <h2
+        className="mb-4 text-[10px] font-medium uppercase tracking-[0.2em]"
+        style={{ color: "rgba(200, 169, 126, 0.5)" }}
+      >
+        Conversation
       </h2>
-      <div className="max-h-64 space-y-2 overflow-y-auto">
+      <div className="max-h-72 space-y-3 overflow-y-auto pr-1">
         {entries.map((entry, i) => (
-          <div
-            key={i}
-            className={`rounded-lg px-3 py-2 text-sm ${
-              entry.role === "user"
-                ? "bg-blue-900/30 text-blue-200"
-                : "bg-gray-800/50 text-gray-200"
-            }`}
-          >
-            <span className="mr-2 text-xs font-semibold uppercase text-gray-500">
-              {entry.role === "user" ? "You" : "Agent"}
-            </span>
-            {entry.text}
+          <div key={i} className="flex gap-3">
+            <div
+              className="mt-1.5 h-1.5 w-1.5 rounded-full shrink-0"
+              style={{
+                background: entry.role === "user" ? "rgba(200, 169, 126, 0.6)" : "rgba(244, 240, 234, 0.3)",
+              }}
+            />
+            <div className="flex-1 min-w-0">
+              <span
+                className="text-[10px] font-medium uppercase tracking-wider"
+                style={{
+                  color: entry.role === "user" ? "rgba(200, 169, 126, 0.7)" : "rgba(244, 240, 234, 0.35)",
+                }}
+              >
+                {entry.role === "user" ? "You" : "Agent"}
+              </span>
+              <p
+                className="mt-0.5 text-sm leading-relaxed"
+                style={{
+                  color: entry.role === "user" ? "rgba(244, 240, 234, 0.85)" : "rgba(244, 240, 234, 0.7)",
+                }}
+              >
+                {entry.text}
+              </p>
+            </div>
           </div>
         ))}
         {partialTranscript && (
-          <div className="rounded-lg bg-blue-900/20 px-3 py-2 text-sm text-blue-300 opacity-70">
-            <span className="mr-2 text-xs font-semibold uppercase text-gray-500">
-              You
-            </span>
-            {partialTranscript}...
+          <div className="flex gap-3">
+            <div
+              className="mt-1.5 h-1.5 w-1.5 rounded-full shrink-0 animate-pulse"
+              style={{ background: "rgba(200, 169, 126, 0.4)" }}
+            />
+            <div className="flex-1 min-w-0">
+              <span
+                className="text-[10px] font-medium uppercase tracking-wider"
+                style={{ color: "rgba(200, 169, 126, 0.5)" }}
+              >
+                You
+              </span>
+              <p className="mt-0.5 text-sm leading-relaxed" style={{ color: "rgba(244, 240, 234, 0.5)" }}>
+                {partialTranscript}
+                <span className="animate-pulse">...</span>
+              </p>
+            </div>
           </div>
         )}
         <div ref={bottomRef} />
