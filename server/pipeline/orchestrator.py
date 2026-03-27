@@ -264,6 +264,20 @@ class Orchestrator:
             return f"Found {total} event{'s' if total != 1 else ''}"
         if name == "move_opportunity":
             return f"Moved \"{result.get('name', 'opportunity')}\" to {result.get('stage', 'new stage')}"
+        if name == "create_contact":
+            return f"Created contact: {result.get('name', 'unknown')}"
+        if name == "send_sms":
+            return f"SMS sent to contact {result.get('contact_id', 'unknown')}"
+        if name == "send_email":
+            return f"Email sent: \"{result.get('subject', '')}\" to contact {result.get('contact_id', 'unknown')}"
+        if name == "get_pipelines":
+            total = result.get("total", 0)
+            return f"Found {total} pipeline{'s' if total != 1 else ''}"
+        if name == "create_opportunity":
+            return f"Created deal: \"{result.get('name', '')}\" ({result.get('status', 'open')})"
+        if name == "get_conversations":
+            total = result.get("total", 0)
+            return f"Found {total} conversation{'s' if total != 1 else ''}"
         try:
             return json.dumps(result)[:200]
         except (TypeError, ValueError):
