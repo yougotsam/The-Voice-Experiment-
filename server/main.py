@@ -3,15 +3,24 @@ import logging
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
+from contextlib import asynccontextmanager
+
 from server.config import settings
 from server.ws.handler import router as ws_router
+from server.tools.ghl import close_ghl_client
 
 logging.basicConfig(
     level=logging.INFO,
     format="%(asctime)s [%(levelname)s] %(name)s: %(message)s",
 )
 
-app = FastAPI(title="Voice Agent API")
+@asynccontextmanager
+async def lifespan(_app: FastAPI):
+    yield
+    await close_ghl_client()
+
+
+app = FastAPI(title="Voice Agent API", lifespan=lifespan)
 
 app.add_middleware(
     CORSMiddleware,

@@ -27,6 +27,13 @@ def _get_client() -> httpx.AsyncClient:
     return _http_client
 
 
+async def close_ghl_client() -> None:
+    global _http_client
+    if _http_client is not None and not _http_client.is_closed:
+        await _http_client.aclose()
+        _http_client = None
+
+
 class GHLContactSearch(Tool):
     name = "search_contacts"
     description = (
