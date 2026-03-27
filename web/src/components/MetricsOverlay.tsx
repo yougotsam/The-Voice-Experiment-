@@ -13,10 +13,10 @@ type MetricsOverlayProps = {
 function badge(label: string, value: number) {
   const { color, borderColor } =
     value < 300
-      ? { color: "rgba(200, 169, 126, 0.7)", borderColor: "rgba(200, 169, 126, 0.2)" }
+      ? { color: "rgba(126, 200, 160, 0.8)", borderColor: "rgba(126, 200, 160, 0.25)" }
       : value < 800
-        ? { color: "rgba(226, 198, 157, 0.6)", borderColor: "rgba(226, 198, 157, 0.2)" }
-        : { color: "rgba(158, 130, 90, 0.5)", borderColor: "rgba(158, 130, 90, 0.2)" };
+        ? { color: "rgba(226, 198, 126, 0.8)", borderColor: "rgba(226, 198, 126, 0.25)" }
+        : { color: "rgba(200, 126, 126, 0.7)", borderColor: "rgba(200, 126, 126, 0.2)" };
   return (
     <span
       className="inline-flex items-center gap-1.5 rounded-full px-3 py-1 text-[10px] font-mono tracking-wide"

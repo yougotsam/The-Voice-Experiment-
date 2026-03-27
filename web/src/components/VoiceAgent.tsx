@@ -27,6 +27,9 @@ export function VoiceAgent() {
   const stateRef = useRef<AgentState>("idle");
   const stuckTimer = useRef<ReturnType<typeof setTimeout> | undefined>(undefined);
 
+  const stopPlaybackRef = useRef<() => void>(() => {});
+  const sendJSONRef = useRef<(msg: Record<string, unknown>) => void>(() => {});
+
   const setAgentState = useCallback((next: AgentState) => {
     setState(next);
     stateRef.current = next;
@@ -34,6 +37,8 @@ export function VoiceAgent() {
     if (next === "processing" || next === "speaking") {
       stuckTimer.current = setTimeout(() => {
         if (stateRef.current === next) {
+          stopPlaybackRef.current();
+          sendJSONRef.current({ type: "interrupt" });
           setState("idle");
           stateRef.current = "idle";
         }
@@ -46,6 +51,7 @@ export function VoiceAgent() {
   }, []);
 
   const { enqueue: enqueueAudio, stop: stopPlayback, setSampleRate } = useAudioPlayback();
+  stopPlaybackRef.current = stopPlayback;
 
   const handleMessage = useCallback(
     (msg: ServerMessage) => {
@@ -109,7 +115,7 @@ export function VoiceAgent() {
 
   const handleBinary = useCallback(
     (data: ArrayBuffer) => {
-      if (stateRef.current === "listening") return;
+      if (stateRef.current === "listening" || stateRef.current === "idle") return;
       if (stateRef.current !== "speaking") {
         setAgentState("speaking");
       }
@@ -130,6 +136,7 @@ export function VoiceAgent() {
       setAgentState("idle");
     },
   });
+  sendJSONRef.current = sendJSON;
 
   const { start: startMic, stop: stopMic } = useMicrophone(
     useCallback(
