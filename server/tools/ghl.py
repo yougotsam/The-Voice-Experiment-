@@ -583,7 +583,10 @@ class GHLGetConversations(Tool):
     }
 
     async def execute(self, **kwargs) -> dict[str, Any]:
-        limit = min(int(kwargs.get("limit", 10)), 20)
+        try:
+            limit = max(1, min(int(kwargs.get("limit", 10)), 20))
+        except (TypeError, ValueError):
+            limit = 10
 
         client = _get_client()
         resp = await client.get(
