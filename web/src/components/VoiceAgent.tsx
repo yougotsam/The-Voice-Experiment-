@@ -8,6 +8,7 @@ import { useVAD } from "@/hooks/useVAD";
 import { TranscriptPanel, TranscriptEntry } from "./TranscriptPanel";
 import { MetricsOverlay } from "./MetricsOverlay";
 import { PersonaSelector } from "./PersonaSelector";
+import { VoiceOrb } from "./VoiceOrb";
 
 type AgentState = "idle" | "listening" | "processing" | "speaking";
 type InputMode = "push" | "vad";
@@ -284,34 +285,12 @@ export function VoiceAgent() {
     },
   });
 
-  const stateConfig: Record<AgentState, { label: string; ringColor: string; orbColor: string; animate: string }> = {
-    idle: {
-      label: inputMode === "vad" ? "Listening" : "Ready",
-      ringColor: "border-gold/20",
-      orbColor: "bg-gradient-to-br from-twilight to-slate-navy",
-      animate: "animate-breathe",
-    },
-    listening: {
-      label: "Listening",
-      ringColor: "border-gold/60",
-      orbColor: "bg-gradient-to-br from-gold/30 to-twilight",
-      animate: "animate-glow-pulse",
-    },
-    processing: {
-      label: "Thinking",
-      ringColor: "border-gold-light/40",
-      orbColor: "bg-gradient-to-br from-gold-muted/30 to-twilight",
-      animate: "animate-breathe",
-    },
-    speaking: {
-      label: "Speaking",
-      ringColor: "border-gold-light/70",
-      orbColor: "bg-gradient-to-br from-gold/20 to-twilight",
-      animate: "animate-glow-pulse",
-    },
+  const stateLabels: Record<AgentState, string> = {
+    idle: inputMode === "vad" ? "Listening" : "Ready",
+    listening: "Listening",
+    processing: "Thinking",
+    speaking: "Speaking",
   };
-
-  const cfg = stateConfig[state];
 
   return (
     <div className="flex w-full max-w-2xl flex-col items-center gap-6 relative z-10">
@@ -343,67 +322,14 @@ export function VoiceAgent() {
       <PersonaSelector onSelect={handlePersona} />
 
       <div className="flex flex-col items-center gap-4 my-4">
-        <div className="relative flex items-center justify-center">
-          {state === "listening" && (
-            <div className="absolute inset-0 rounded-full animate-pulse-ring" style={{
-              border: "1px solid rgba(200, 169, 126, 0.2)",
-              transform: "scale(1.3)",
-            }} />
-          )}
-          <div className={`absolute inset-0 rounded-full ${cfg.ringColor} border-2 transition-all duration-700`}
-            style={{ transform: "scale(1.15)" }}
-          />
-
-          {inputMode === "push" ? (
-            <button
-              onMouseDown={handlePushToTalk}
-              onMouseUp={handleRelease}
-              onMouseLeave={handleRelease}
-              onTouchStart={handlePushToTalk}
-              onTouchEnd={handleRelease}
-              onKeyDown={(e) => {
-                if (e.key === " " || e.key === "Enter") {
-                  e.preventDefault();
-                  handlePushToTalk();
-                }
-              }}
-              onKeyUp={(e) => {
-                if (e.key === " " || e.key === "Enter") {
-                  e.preventDefault();
-                  handleRelease();
-                }
-              }}
-              disabled={!connected}
-              className={`relative h-36 w-36 rounded-full flex flex-col items-center justify-center gap-2 transition-all duration-500 cursor-pointer select-none ${cfg.orbColor} ${cfg.animate} disabled:opacity-30 disabled:cursor-not-allowed`}
-              style={{
-                border: "1px solid rgba(200, 169, 126, 0.15)",
-                boxShadow: state === "listening"
-                  ? "0 0 60px rgba(200, 169, 126, 0.2), inset 0 0 30px rgba(200, 169, 126, 0.1)"
-                  : "0 0 30px rgba(200, 169, 126, 0.08)",
-              }}
-            >
-              <OrbIcon state={state} />
-              <span className="text-[11px] font-medium tracking-wider uppercase" style={{ color: "rgba(244, 240, 234, 0.6)" }}>
-                {cfg.label}
-              </span>
-            </button>
-          ) : (
-            <div
-              className={`relative h-36 w-36 rounded-full flex flex-col items-center justify-center gap-2 transition-all duration-500 ${cfg.orbColor} ${cfg.animate}`}
-              style={{
-                border: "1px solid rgba(200, 169, 126, 0.15)",
-                boxShadow: state === "speaking"
-                  ? "0 0 60px rgba(200, 169, 126, 0.2), inset 0 0 30px rgba(200, 169, 126, 0.1)"
-                  : "0 0 30px rgba(200, 169, 126, 0.08)",
-              }}
-            >
-              <OrbIcon state={state} />
-              <span className="text-[11px] font-medium tracking-wider uppercase" style={{ color: "rgba(244, 240, 234, 0.6)" }}>
-                {cfg.label}
-              </span>
-            </div>
-          )}
-        </div>
+        <VoiceOrb
+          state={state}
+          label={stateLabels[state]}
+          connected={connected}
+          inputMode={inputMode}
+          onPushStart={handlePushToTalk}
+          onPushEnd={handleRelease}
+        />
 
         {(state === "speaking" || state === "processing") && (
           <button
@@ -453,65 +379,4 @@ export function VoiceAgent() {
   );
 }
 
-function OrbIcon({ state }: { state: AgentState }) {
-  if (state === "listening") {
-    return (
-      <div className="flex items-center gap-1">
-        {[0, 1, 2, 3, 4].map((i) => (
-          <div
-            key={i}
-            className="w-[3px] rounded-full bg-gold-light"
-            style={{
-              height: `${12 + Math.sin(i * 1.2) * 8}px`,
-              animation: `breathe ${0.6 + i * 0.1}s ease-in-out infinite`,
-              opacity: 0.7,
-            }}
-          />
-        ))}
-      </div>
-    );
-  }
 
-  if (state === "processing") {
-    return (
-      <div className="flex gap-1.5">
-        {[0, 1, 2].map((i) => (
-          <div
-            key={i}
-            className="w-1.5 h-1.5 rounded-full bg-gold-pale"
-            style={{
-              animation: `breathe 1s ease-in-out ${i * 0.2}s infinite`,
-              opacity: 0.6,
-            }}
-          />
-        ))}
-      </div>
-    );
-  }
-
-  if (state === "speaking") {
-    return (
-      <div className="flex items-center gap-[3px]">
-        {[0, 1, 2, 3, 4, 5, 6].map((i) => (
-          <div
-            key={i}
-            className="w-[2px] rounded-full bg-gold-light"
-            style={{
-              height: `${6 + Math.sin(i * 0.9) * 10}px`,
-              animation: `breathe ${0.4 + i * 0.08}s ease-in-out infinite`,
-              opacity: 0.6,
-            }}
-          />
-        ))}
-      </div>
-    );
-  }
-
-  return (
-    <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" style={{ color: "rgba(200, 169, 126, 0.5)" }}>
-      <path d="M12 2a3 3 0 0 0-3 3v7a3 3 0 0 0 6 0V5a3 3 0 0 0-3-3Z" />
-      <path d="M19 10v2a7 7 0 0 1-14 0v-2" />
-      <line x1="12" x2="12" y1="19" y2="22" />
-    </svg>
-  );
-}
