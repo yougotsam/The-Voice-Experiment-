@@ -11,6 +11,7 @@ import { PersonaSelector } from "./PersonaSelector";
 import { VoiceOrb } from "./VoiceOrb";
 import { TabPanel } from "./TabPanel";
 import { StagingArea, StagingEntry } from "./StagingArea";
+import { CRMPanel } from "./CRMPanel";
 import type { AgentState, InputMode, Metrics } from "@/types";
 
 const WS_URL = process.env.NEXT_PUBLIC_WS_URL || "ws://localhost:8000/ws";
@@ -407,26 +408,7 @@ export function VoiceAgent() {
         {{
           transcript: <TranscriptPanel entries={entries} partialTranscript={partial} />,
           staging: <StagingArea entries={stagingEntries} />,
-          crm: (
-            <div className="flex flex-col items-center justify-center py-12 gap-3">
-              <div className="h-10 w-10 rounded-full flex items-center justify-center"
-                style={{ border: "1px solid rgba(200, 169, 126, 0.15)" }}
-              >
-                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" style={{ color: "rgba(200, 169, 126, 0.3)" }}>
-                  <path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2" />
-                  <circle cx="9" cy="7" r="4" />
-                  <path d="M22 21v-2a4 4 0 0 0-3-3.87" />
-                  <path d="M16 3.13a4 4 0 0 1 0 7.75" />
-                </svg>
-              </div>
-              <p className="text-[11px] uppercase tracking-widest" style={{ color: "rgba(244, 240, 234, 0.25)" }}>
-                CRM Panel
-              </p>
-              <p className="text-xs text-center max-w-[240px]" style={{ color: "rgba(244, 240, 234, 0.15)" }}>
-                Contact search results and pipeline data will appear here
-              </p>
-            </div>
-          ),
+          crm: <CRMPanel />,
           analytics: (
             <div className="flex flex-col items-center justify-center py-12 gap-3">
               <div className="h-10 w-10 rounded-full flex items-center justify-center"
