@@ -17,6 +17,7 @@ const WS_URL = process.env.NEXT_PUBLIC_WS_URL || "ws://localhost:8000/ws";
 const STUCK_TIMEOUT_MS = 30000;
 const MAX_ENTRIES = 200;
 const MAX_TEXT_INPUT = 2000;
+const MAX_STAGING_ENTRIES = 50;
 
 export function VoiceAgent() {
   const [state, setState] = useState<AgentState>("idle");
@@ -136,16 +137,19 @@ export function VoiceAgent() {
             return updated;
           });
           if (msg.name === "draft_content" && msg.success) {
-            setStagingEntries((prev) => [
-              ...prev,
-              {
-                id: `draft-${Date.now()}`,
-                type: "Draft",
-                title: msg.summary || "Content Draft",
-                content: msg.summary || "",
-                timestamp: Date.now(),
-              },
-            ]);
+            setStagingEntries((prev) => {
+              const next = [
+                ...prev,
+                {
+                  id: `draft-${Date.now()}`,
+                  type: "Draft",
+                  title: msg.summary || "Content Draft",
+                  content: msg.summary || "",
+                  timestamp: Date.now(),
+                },
+              ];
+              return next.length > MAX_STAGING_ENTRIES ? next.slice(-MAX_STAGING_ENTRIES) : next;
+            });
           }
           break;
         case "persona.loaded":
