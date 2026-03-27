@@ -1,6 +1,7 @@
 import logging
 
 from fastapi import APIRouter, HTTPException
+from httpx import RequestError
 
 from server.config import settings
 from server.tools.ghl import GHL_BASE, _get_client
@@ -20,32 +21,36 @@ async def list_contacts(query: str = "", limit: int = 20):
     limit = max(1, min(limit, 50))
     client = _get_client()
 
-    if query:
-        resp = await client.get(
-            f"{GHL_BASE}/contacts/search",
-            params={"locationId": settings.ghl_location_id, "query": query, "limit": limit},
-        )
-    else:
-        resp = await client.get(
-            f"{GHL_BASE}/contacts/",
-            params={"locationId": settings.ghl_location_id, "limit": limit, "sortBy": "date_added", "order": "desc"},
-        )
+    try:
+        if query:
+            resp = await client.get(
+                f"{GHL_BASE}/contacts/search",
+                params={"locationId": settings.ghl_location_id, "query": query, "limit": limit},
+            )
+        else:
+            resp = await client.get(
+                f"{GHL_BASE}/contacts/",
+                params={"locationId": settings.ghl_location_id, "limit": limit, "sortBy": "date_added", "order": "desc"},
+            )
+    except RequestError as exc:
+        logger.error("GHL contacts request failed: %s", exc)
+        raise HTTPException(status_code=502, detail="Failed to reach CRM service") from exc
 
     if resp.status_code != 200:
         logger.error("CRM contacts %s: %s", resp.status_code, resp.text[:300])
         raise HTTPException(status_code=resp.status_code, detail="Failed to fetch contacts")
     data = resp.json()
 
-    contacts = data.get("contacts", [])
+    contacts = data.get("contacts") or []
     results = []
     for c in contacts[:limit]:
         results.append({
             "id": c.get("id"),
-            "name": f'{c.get("firstName", "")} {c.get("lastName", "")}'.strip(),
-            "email": c.get("email", ""),
-            "phone": c.get("phone", ""),
+            "name": f'{c.get("firstName") or ""} {c.get("lastName") or ""}'.strip(),
+            "email": c.get("email") or "",
+            "phone": c.get("phone") or "",
             "tags": c.get("tags") or [],
-            "dateAdded": c.get("dateAdded", ""),
+            "dateAdded": c.get("dateAdded") or "",
         })
     return {"contacts": results, "total": len(contacts)}
 
@@ -54,20 +59,25 @@ async def list_contacts(query: str = "", limit: int = 20):
 async def list_pipelines():
     _require_ghl()
     client = _get_client()
-    resp = await client.get(
-        f"{GHL_BASE}/opportunities/pipelines",
-        params={"locationId": settings.ghl_location_id},
-    )
+    try:
+        resp = await client.get(
+            f"{GHL_BASE}/opportunities/pipelines",
+            params={"locationId": settings.ghl_location_id},
+        )
+    except RequestError as exc:
+        logger.error("GHL pipelines request failed: %s", exc)
+        raise HTTPException(status_code=502, detail="Failed to reach CRM service") from exc
+
     if resp.status_code != 200:
         logger.error("CRM pipelines %s: %s", resp.status_code, resp.text[:300])
         raise HTTPException(status_code=resp.status_code, detail="Failed to fetch pipelines")
     data = resp.json()
 
-    pipelines = data.get("pipelines", [])
+    pipelines = data.get("pipelines") or []
     results = []
     for p in pipelines:
         stages = []
-        for s in p.get("stages", []):
+        for s in (p.get("stages") or []):
             stages.append({"id": s.get("id"), "name": s.get("name")})
         results.append({"id": p.get("id"), "name": p.get("name"), "stages": stages})
     return {"pipelines": results}
@@ -81,23 +91,29 @@ async def list_opportunities(pipeline_id: str = "", limit: int = 20):
     params: dict = {"locationId": settings.ghl_location_id, "limit": limit, "order": "desc"}
     if pipeline_id:
         params["pipelineId"] = pipeline_id
-    resp = await client.get(f"{GHL_BASE}/opportunities/search", params=params)
+    try:
+        resp = await client.get(f"{GHL_BASE}/opportunities/search", params=params)
+    except RequestError as exc:
+        logger.error("GHL opportunities request failed: %s", exc)
+        raise HTTPException(status_code=502, detail="Failed to reach CRM service") from exc
+
     if resp.status_code != 200:
         logger.error("CRM opportunities %s: %s", resp.status_code, resp.text[:300])
         raise HTTPException(status_code=resp.status_code, detail="Failed to fetch opportunities")
     data = resp.json()
 
-    opportunities = data.get("opportunities", [])
+    opportunities = data.get("opportunities") or []
     results = []
     for o in opportunities[:limit]:
+        monetary = o.get("monetaryValue")
         results.append({
             "id": o.get("id"),
-            "name": o.get("name", "Untitled"),
-            "status": o.get("status", "open"),
-            "stage": o.get("pipelineStageName", o.get("pipelineStageId", "")),
-            "monetaryValue": o.get("monetaryValue", 0),
-            "contactName": o.get("contact", {}).get("name", ""),
-            "dateAdded": o.get("createdAt", ""),
+            "name": o.get("name") or "Untitled",
+            "status": o.get("status") or "open",
+            "stage": o.get("pipelineStageName") or o.get("pipelineStageId") or "",
+            "monetaryValue": float(monetary) if monetary is not None else 0,
+            "contactName": (o.get("contact") or {}).get("name") or "",
+            "dateAdded": o.get("createdAt") or "",
         })
     return {"opportunities": results, "total": len(opportunities)}
 
@@ -107,30 +123,37 @@ async def list_conversations(limit: int = 15):
     _require_ghl()
     limit = max(1, min(limit, 30))
     client = _get_client()
-    resp = await client.get(
-        f"{GHL_BASE}/conversations/search",
-        params={
-            "locationId": settings.ghl_location_id,
-            "limit": limit,
-            "sort": "desc",
-            "sortBy": "last_message_date",
-        },
-    )
+    try:
+        resp = await client.get(
+            f"{GHL_BASE}/conversations/search",
+            params={
+                "locationId": settings.ghl_location_id,
+                "limit": limit,
+                "sort": "desc",
+                "sortBy": "last_message_date",
+            },
+        )
+    except RequestError as exc:
+        logger.error("GHL conversations request failed: %s", exc)
+        raise HTTPException(status_code=502, detail="Failed to reach CRM service") from exc
+
     if resp.status_code != 200:
         logger.error("CRM conversations %s: %s", resp.status_code, resp.text[:300])
         raise HTTPException(status_code=resp.status_code, detail="Failed to fetch conversations")
     data = resp.json()
 
-    conversations = data.get("conversations", [])
+    conversations = data.get("conversations") or []
     results = []
     for conv in conversations[:limit]:
+        contact_name = conv.get("contactName") or conv.get("fullName") or ""
+        last_msg = conv.get("lastMessageBody") or ""
         results.append({
             "id": conv.get("id"),
-            "contactId": conv.get("contactId", ""),
-            "contactName": conv.get("contactName", conv.get("fullName", "")),
-            "lastMessage": conv.get("lastMessageBody", "")[:200],
-            "lastMessageType": conv.get("lastMessageType", ""),
-            "lastMessageDate": conv.get("lastMessageDate", ""),
-            "unreadCount": conv.get("unreadCount", 0),
+            "contactId": conv.get("contactId") or "",
+            "contactName": contact_name,
+            "lastMessage": last_msg[:200],
+            "lastMessageType": conv.get("lastMessageType") or "",
+            "lastMessageDate": conv.get("lastMessageDate") or "",
+            "unreadCount": conv.get("unreadCount") or 0,
         })
     return {"conversations": results, "total": len(conversations)}
