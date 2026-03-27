@@ -137,13 +137,16 @@ export function VoiceAgent() {
             return updated;
           });
           if (msg.name === "draft_content" && msg.success) {
+            const args = msg.arguments ?? {};
+            const draftType = String(args.content_type || "content");
+            const draftTopic = String(args.topic || "Untitled");
             setStagingEntries((prev) => {
               const next = [
                 ...prev,
                 {
                   id: `draft-${Date.now()}`,
                   type: "Draft",
-                  title: msg.summary || "Content Draft",
+                  title: `${draftType.charAt(0).toUpperCase() + draftType.slice(1)}: ${draftTopic}`,
                   content: msg.summary || "",
                   timestamp: Date.now(),
                 },
@@ -250,6 +253,7 @@ export function VoiceAgent() {
       setAgentState("idle");
       sendJSON({ type: "config", persona_id: personaId });
       setEntries([]);
+      setStagingEntries([]);
       setMetrics(null);
     },
     [sendJSON, cleanupActiveSession, stopPlayback, setAgentState],
