@@ -1,4 +1,5 @@
 import logging
+import re
 from typing import Any
 
 import httpx
@@ -9,6 +10,9 @@ from server.config import settings
 logger = logging.getLogger(__name__)
 
 GHL_BASE = "https://services.leadconnectorhq.com"
+
+_PHONE_RE = re.compile(r"^\+?[\d\s\-().]{7,20}$")
+_EMAIL_RE = re.compile(r"^[^@\s]+@[^@\s]+\.[^@\s]+$")
 
 _http_client: httpx.AsyncClient | None = None
 
@@ -248,3 +252,364 @@ class GHLMoveOpportunity(Tool):
             "status": opp.get("status"),
             "stage": opp.get("pipelineStageName", opp.get("pipelineStageId")),
         }
+
+
+class GHLCreateContact(Tool):
+    name = "create_contact"
+    description = (
+        "Create a new contact in GoHighLevel CRM. "
+        "Requires at least a first name and one of: email, phone."
+    )
+    parameters = {
+        "type": "object",
+        "properties": {
+            "first_name": {
+                "type": "string",
+                "description": "Contact's first name",
+            },
+            "last_name": {
+                "type": "string",
+                "description": "Contact's last name",
+            },
+            "email": {
+                "type": "string",
+                "description": "Contact's email address",
+            },
+            "phone": {
+                "type": "string",
+                "description": "Contact's phone number (E.164 format preferred, e.g. +15551234567)",
+            },
+            "tags": {
+                "type": "array",
+                "items": {"type": "string"},
+                "description": "Tags to apply to the contact",
+            },
+        },
+        "required": ["first_name"],
+    }
+
+    async def execute(self, **kwargs) -> dict[str, Any]:
+        first_name = kwargs.get("first_name", "").strip()
+        if not first_name:
+            return {"error": "Missing required argument: first_name"}
+
+        email = kwargs.get("email", "").strip()
+        phone = kwargs.get("phone", "").strip()
+        if not email and not phone:
+            return {"error": "At least one of email or phone is required"}
+
+        if email and not _EMAIL_RE.match(email):
+            return {"error": f"Invalid email format: '{email}'"}
+        if phone and not _PHONE_RE.match(phone):
+            return {"error": f"Invalid phone format: '{phone}'. Use E.164 (e.g. +15551234567)"}
+
+        body: dict[str, Any] = {
+            "firstName": first_name,
+            "locationId": settings.ghl_location_id,
+        }
+        if kwargs.get("last_name"):
+            body["lastName"] = kwargs["last_name"].strip()
+        if email:
+            body["email"] = email
+        if phone:
+            body["phone"] = phone
+        if kwargs.get("tags"):
+            body["tags"] = kwargs["tags"]
+
+        client = _get_client()
+        resp = await client.post(f"{GHL_BASE}/contacts/", json=body)
+        if resp.status_code not in (200, 201):
+            logger.error("GHL create contact %s: %s", resp.status_code, resp.text[:300])
+            resp.raise_for_status()
+        data = resp.json()
+
+        contact = data.get("contact", data)
+        return {
+            "id": contact.get("id"),
+            "name": f'{contact.get("firstName", "")} {contact.get("lastName", "")}'.strip(),
+            "email": contact.get("email"),
+            "phone": contact.get("phone"),
+        }
+
+
+class GHLSendSMS(Tool):
+    name = "send_sms"
+    description = (
+        "Send an SMS message to a contact via GoHighLevel. "
+        "Requires the contact ID and the message body."
+    )
+    parameters = {
+        "type": "object",
+        "properties": {
+            "contact_id": {
+                "type": "string",
+                "description": "The GHL contact ID to send the SMS to",
+            },
+            "message": {
+                "type": "string",
+                "description": "The SMS message body (max 1600 characters)",
+            },
+        },
+        "required": ["contact_id", "message"],
+    }
+
+    async def execute(self, **kwargs) -> dict[str, Any]:
+        contact_id = kwargs.get("contact_id", "").strip()
+        message = kwargs.get("message", "").strip()
+        if not contact_id:
+            return {"error": "Missing required argument: contact_id"}
+        if not message:
+            return {"error": "Missing required argument: message"}
+        if len(message) > 1600:
+            return {"error": f"Message too long ({len(message)} chars). Max 1600."}
+
+        client = _get_client()
+        resp = await client.post(
+            f"{GHL_BASE}/conversations/messages",
+            json={
+                "type": "SMS",
+                "contactId": contact_id,
+                "message": message,
+            },
+        )
+        if resp.status_code not in (200, 201):
+            logger.error("GHL send SMS %s: %s", resp.status_code, resp.text[:300])
+            resp.raise_for_status()
+        data = resp.json()
+
+        msg = data.get("message", data)
+        return {
+            "id": msg.get("id", msg.get("messageId")),
+            "status": msg.get("status", "sent"),
+            "contact_id": contact_id,
+        }
+
+
+class GHLSendEmail(Tool):
+    name = "send_email"
+    description = (
+        "Send an email to a contact via GoHighLevel. "
+        "Requires the contact ID, subject, and HTML body."
+    )
+    parameters = {
+        "type": "object",
+        "properties": {
+            "contact_id": {
+                "type": "string",
+                "description": "The GHL contact ID to send the email to",
+            },
+            "subject": {
+                "type": "string",
+                "description": "Email subject line",
+            },
+            "body": {
+                "type": "string",
+                "description": "Email body content (plain text — will be wrapped in HTML)",
+            },
+        },
+        "required": ["contact_id", "subject", "body"],
+    }
+
+    async def execute(self, **kwargs) -> dict[str, Any]:
+        contact_id = kwargs.get("contact_id", "").strip()
+        subject = kwargs.get("subject", "").strip()
+        body = kwargs.get("body", "").strip()
+        if not contact_id:
+            return {"error": "Missing required argument: contact_id"}
+        if not subject:
+            return {"error": "Missing required argument: subject"}
+        if not body:
+            return {"error": "Missing required argument: body"}
+
+        html_body = body.replace("\n", "<br>")
+
+        client = _get_client()
+        resp = await client.post(
+            f"{GHL_BASE}/conversations/messages",
+            json={
+                "type": "Email",
+                "contactId": contact_id,
+                "subject": subject,
+                "html": f"<p>{html_body}</p>",
+                "message": body,
+            },
+        )
+        if resp.status_code not in (200, 201):
+            logger.error("GHL send email %s: %s", resp.status_code, resp.text[:300])
+            resp.raise_for_status()
+        data = resp.json()
+
+        msg = data.get("message", data)
+        return {
+            "id": msg.get("id", msg.get("messageId")),
+            "status": msg.get("status", "sent"),
+            "contact_id": contact_id,
+            "subject": subject,
+        }
+
+
+class GHLGetPipelines(Tool):
+    name = "get_pipelines"
+    description = (
+        "List all sales pipelines and their stages from GoHighLevel. "
+        "Use this to find pipeline and stage IDs for creating or moving opportunities."
+    )
+    parameters = {
+        "type": "object",
+        "properties": {},
+        "required": [],
+    }
+
+    async def execute(self, **kwargs) -> dict[str, Any]:
+        client = _get_client()
+        resp = await client.get(
+            f"{GHL_BASE}/opportunities/pipelines",
+            params={"locationId": settings.ghl_location_id},
+        )
+        if resp.status_code != 200:
+            logger.error("GHL get pipelines %s: %s", resp.status_code, resp.text[:300])
+            resp.raise_for_status()
+        data = resp.json()
+
+        pipelines = data.get("pipelines", [])
+        results = []
+        for p in pipelines:
+            stages = []
+            for s in p.get("stages", []):
+                stages.append({
+                    "id": s.get("id"),
+                    "name": s.get("name"),
+                })
+            results.append({
+                "id": p.get("id"),
+                "name": p.get("name"),
+                "stages": stages,
+            })
+        return {"pipelines": results, "total": len(results)}
+
+
+class GHLCreateOpportunity(Tool):
+    name = "create_opportunity"
+    description = (
+        "Create a new opportunity (deal) in a GoHighLevel pipeline. "
+        "Requires a name, pipeline ID, and stage ID. Optionally link to a contact."
+    )
+    parameters = {
+        "type": "object",
+        "properties": {
+            "name": {
+                "type": "string",
+                "description": "Name of the opportunity/deal",
+            },
+            "pipeline_id": {
+                "type": "string",
+                "description": "Pipeline ID (use get_pipelines to find this)",
+            },
+            "stage_id": {
+                "type": "string",
+                "description": "Pipeline stage ID to place the opportunity in",
+            },
+            "contact_id": {
+                "type": "string",
+                "description": "Contact ID to associate with this opportunity",
+            },
+            "monetary_value": {
+                "type": "number",
+                "description": "Deal value in dollars",
+            },
+            "status": {
+                "type": "string",
+                "description": "Status: open, won, lost, or abandoned (defaults to open)",
+            },
+        },
+        "required": ["name", "pipeline_id", "stage_id"],
+    }
+
+    async def execute(self, **kwargs) -> dict[str, Any]:
+        name = kwargs.get("name", "").strip()
+        pipeline_id = kwargs.get("pipeline_id", "").strip()
+        stage_id = kwargs.get("stage_id", "").strip()
+        if not name:
+            return {"error": "Missing required argument: name"}
+        if not pipeline_id:
+            return {"error": "Missing required argument: pipeline_id"}
+        if not stage_id:
+            return {"error": "Missing required argument: stage_id"}
+
+        body: dict[str, Any] = {
+            "name": name,
+            "pipelineId": pipeline_id,
+            "pipelineStageId": stage_id,
+            "locationId": settings.ghl_location_id,
+            "status": kwargs.get("status", "open"),
+        }
+        if kwargs.get("contact_id"):
+            body["contactId"] = kwargs["contact_id"]
+        if kwargs.get("monetary_value") is not None:
+            body["monetaryValue"] = kwargs["monetary_value"]
+
+        client = _get_client()
+        resp = await client.post(f"{GHL_BASE}/opportunities/", json=body)
+        if resp.status_code not in (200, 201):
+            logger.error("GHL create opportunity %s: %s", resp.status_code, resp.text[:300])
+            resp.raise_for_status()
+        data = resp.json()
+
+        opp = data.get("opportunity", data)
+        return {
+            "id": opp.get("id"),
+            "name": opp.get("name"),
+            "status": opp.get("status"),
+            "stage": opp.get("pipelineStageName", opp.get("pipelineStageId")),
+            "monetary_value": opp.get("monetaryValue"),
+        }
+
+
+class GHLGetConversations(Tool):
+    name = "get_conversations"
+    description = (
+        "List recent conversations (SMS, email, etc.) from GoHighLevel. "
+        "Returns the most recent conversation threads with their last message."
+    )
+    parameters = {
+        "type": "object",
+        "properties": {
+            "limit": {
+                "type": "integer",
+                "description": "Number of conversations to return (max 20, default 10)",
+            },
+        },
+        "required": [],
+    }
+
+    async def execute(self, **kwargs) -> dict[str, Any]:
+        limit = min(int(kwargs.get("limit", 10)), 20)
+
+        client = _get_client()
+        resp = await client.get(
+            f"{GHL_BASE}/conversations/search",
+            params={
+                "locationId": settings.ghl_location_id,
+                "limit": limit,
+                "sort": "desc",
+                "sortBy": "last_message_date",
+            },
+        )
+        if resp.status_code != 200:
+            logger.error("GHL get conversations %s: %s", resp.status_code, resp.text[:300])
+            resp.raise_for_status()
+        data = resp.json()
+
+        conversations = data.get("conversations", [])
+        results = []
+        for conv in conversations[:limit]:
+            results.append({
+                "id": conv.get("id"),
+                "contact_id": conv.get("contactId"),
+                "contact_name": conv.get("contactName", conv.get("fullName", "")),
+                "last_message": conv.get("lastMessageBody", "")[:200],
+                "last_message_type": conv.get("lastMessageType"),
+                "last_message_date": conv.get("lastMessageDate"),
+                "unread_count": conv.get("unreadCount", 0),
+            })
+        return {"conversations": results, "total": len(conversations), "returned": len(results)}

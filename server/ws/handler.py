@@ -18,7 +18,18 @@ from server.tts.elevenlabs import ElevenLabsTTS
 from server.pipeline.orchestrator import Orchestrator
 from server.pipeline.session import ConversationSession
 from server.tools.base import ToolRegistry
-from server.tools.ghl import GHLContactSearch, GHLDraftContent, GHLGetCalendarEvents, GHLMoveOpportunity
+from server.tools.ghl import (
+    GHLContactSearch,
+    GHLCreateContact,
+    GHLCreateOpportunity,
+    GHLDraftContent,
+    GHLGetCalendarEvents,
+    GHLGetConversations,
+    GHLGetPipelines,
+    GHLMoveOpportunity,
+    GHLSendEmail,
+    GHLSendSMS,
+)
 
 logger = logging.getLogger(__name__)
 router = APIRouter()
@@ -88,9 +99,15 @@ async def websocket_endpoint(ws: WebSocket) -> None:
         tool_registry.register(GHLDraftContent())
         if settings.ghl_api_key and settings.ghl_location_id:
             tool_registry.register(GHLContactSearch())
+            tool_registry.register(GHLCreateContact())
             tool_registry.register(GHLGetCalendarEvents())
+            tool_registry.register(GHLGetPipelines())
+            tool_registry.register(GHLCreateOpportunity())
             tool_registry.register(GHLMoveOpportunity())
-            logger.info("GHL tools enabled for session %s", session_id)
+            tool_registry.register(GHLSendSMS())
+            tool_registry.register(GHLSendEmail())
+            tool_registry.register(GHLGetConversations())
+            logger.info("GHL tools enabled (%d tools) for session %s", len(tool_registry), session_id)
 
         orchestrator = Orchestrator(stt, llm, tts, session, send_json, send_audio, send_status, tool_registry)
 
