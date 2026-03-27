@@ -237,10 +237,17 @@ class Orchestrator:
         base = self._session.system_prompt
         if not tools:
             return base + NO_TOOLS_NOTICE
-        tool_lines = []
+        tool_lines: list[str] = []
         for t in tools:
-            fn = t.get("function", {})
-            tool_lines.append(f"- {fn.get('name', '?')}: {fn.get('description', '')}")
+            fn = t.get("function")
+            if not isinstance(fn, dict):
+                continue
+            name = fn.get("name")
+            if not name:
+                continue
+            tool_lines.append(f"- {name}: {fn.get('description', '')}")
+        if not tool_lines:
+            return base + NO_TOOLS_NOTICE
         return base + TOOL_AWARENESS_PREAMBLE + "\n".join(tool_lines)
 
     @staticmethod
