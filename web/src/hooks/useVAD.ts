@@ -14,10 +14,15 @@ let vadModuleLoading: Promise<typeof import("@ricky0123/vad-web")> | null = null
 function preloadVADModule(): Promise<typeof import("@ricky0123/vad-web")> {
   if (vadModuleCache) return Promise.resolve(vadModuleCache);
   if (vadModuleLoading) return vadModuleLoading;
-  vadModuleLoading = import("@ricky0123/vad-web").then((mod) => {
-    vadModuleCache = mod;
-    return mod;
-  });
+  vadModuleLoading = import("@ricky0123/vad-web")
+    .then((mod) => {
+      vadModuleCache = mod;
+      return mod;
+    })
+    .catch((err) => {
+      vadModuleLoading = null;
+      throw err;
+    });
   return vadModuleLoading;
 }
 
