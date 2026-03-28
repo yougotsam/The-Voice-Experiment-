@@ -12,6 +12,7 @@ import { VoiceOrb } from "./VoiceOrb";
 import { TabPanel } from "./TabPanel";
 import { StagingArea, StagingEntry } from "./StagingArea";
 import { CRMPanel } from "./CRMPanel";
+import { ProviderSelectors } from "./ProviderSelectors";
 import type { AgentState, InputMode, Metrics } from "@/types";
 
 const WS_URL = process.env.NEXT_PUBLIC_WS_URL || "ws://localhost:8000/ws";
@@ -165,6 +166,12 @@ export function VoiceAgent() {
             ]);
           }
           break;
+        case "model.loaded":
+          console.log("[Provider] LLM switched to:", msg.name);
+          break;
+        case "tts.loaded":
+          console.log("[Provider] TTS switched to:", (msg as Record<string, unknown>).provider);
+          break;
         case "error":
           console.error("Server error:", msg.text);
           stopPlayback();
@@ -260,6 +267,20 @@ export function VoiceAgent() {
     [sendJSON, cleanupActiveSession, stopPlayback, setAgentState],
   );
 
+  const handleModelChange = useCallback(
+    (modelId: string) => {
+      sendJSON({ type: "config", model_id: modelId });
+    },
+    [sendJSON],
+  );
+
+  const handleTTSChange = useCallback(
+    (providerId: string) => {
+      sendJSON({ type: "config", tts_provider: providerId });
+    },
+    [sendJSON],
+  );
+
   const handleTextSubmit = useCallback((e: React.FormEvent) => {
     e.preventDefault();
     const text = textInput.trim().slice(0, MAX_TEXT_INPUT);
@@ -349,6 +370,7 @@ export function VoiceAgent() {
       </div>
 
       <PersonaSelector onSelect={handlePersona} />
+      <ProviderSelectors onModelChange={handleModelChange} onTTSChange={handleTTSChange} />
 
       <div className="flex flex-col items-center gap-3">
         <VoiceOrb

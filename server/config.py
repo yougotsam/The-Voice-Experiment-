@@ -14,6 +14,8 @@ class Settings(BaseSettings):
     tts_fallback_chain: str = "groq,elevenlabs"
     host: str = "0.0.0.0"
     port: int = 8000
+    gemini_api_key: str = ""
+    xai_api_key: str = ""
     ghl_api_key: str = ""
     ghl_location_id: str = ""
     cors_origins: str = "http://localhost:3000"

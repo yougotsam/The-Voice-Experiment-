@@ -17,6 +17,10 @@ class OpenAICompatLLM(LLMProvider):
         self._client = AsyncOpenAI(api_key=api_key, base_url=base_url, timeout=LLM_TIMEOUT)
         self._model = model
 
+    def set_model(self, model: str, base_url: str, api_key: str) -> None:
+        self._model = model
+        self._client = AsyncOpenAI(api_key=api_key, base_url=base_url, timeout=LLM_TIMEOUT)
+
     async def stream_chat(
         self,
         messages: list[dict],
