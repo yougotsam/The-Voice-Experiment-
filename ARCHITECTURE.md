@@ -126,7 +126,7 @@ Binary frames = raw audio (PCM16 16kHz). Text frames = JSON with `type` field.
 
 ### Personas (`server/personas.py`)
 
-Persona definitions with name, system prompt, greeting, and optional voice ID. Selected at runtime via the persona selector. Available personas: Zeebs (default), Sales Pro, Ops Manager, Creative Director.
+Persona definitions with name, system prompt, greeting, and optional voice ID. Selected at runtime via the persona selector. Available personas: Zeebs (default), Sales Pro, Ops Architect, Creative Director, Companion (empathic).
 
 ## Frontend (`web/`)
 
