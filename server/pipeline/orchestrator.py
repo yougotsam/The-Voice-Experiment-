@@ -9,6 +9,7 @@ from server.stt.base import STTProvider
 from server.llm.base import LLMProvider
 from server.tts.base import TTSProvider
 from server.pipeline.session import ConversationSession
+from server.pipeline.metrics import SessionMetrics
 from server.tools.base import ToolRegistry
 
 logger = logging.getLogger(__name__)
@@ -48,6 +49,7 @@ class Orchestrator:
         send_audio: Callable[[bytes], Awaitable[None]],
         send_status: Callable[[str], Awaitable[None]],
         tool_registry: ToolRegistry | None = None,
+        metrics: SessionMetrics | None = None,
     ):
         self._stt = stt
         self._llm = llm
@@ -57,6 +59,7 @@ class Orchestrator:
         self._send_audio = send_audio
         self._send_status = send_status
         self._tool_registry = tool_registry
+        self._metrics = metrics
         self._processing_lock = asyncio.Lock()
         self._response_task: asyncio.Task | None = None
 
@@ -193,11 +196,17 @@ class Orchestrator:
                     })
 
             total = time.perf_counter() - t_start
+            llm_ms = round(llm_ttfb * 1000)
+            tts_ms = round(tts_ttfb * 1000)
+            total_ms = round(total * 1000)
             await self._send_json("metrics", {
-                "llm_ttfb_ms": round(llm_ttfb * 1000),
-                "tts_ttfb_ms": round(tts_ttfb * 1000),
-                "total_ms": round(total * 1000),
+                "llm_ttfb_ms": llm_ms,
+                "tts_ttfb_ms": tts_ms,
+                "total_ms": total_ms,
             })
+            if self._metrics:
+                self._metrics.record_interaction(llm_ms, tts_ms, total_ms)
+                await self._send_json("analytics", self._metrics.snapshot())
             await self._send_status("idle")
 
     async def _execute_tool_calls(self, tool_calls: list[dict]) -> None:
@@ -225,6 +234,8 @@ class Orchestrator:
                     result = {"error": f"Tool '{name}' encountered an internal error."}
 
             success = "error" not in result
+            if self._metrics:
+                self._metrics.record_tool_call(name, success)
             summary = self._summarize_tool_result(name, result)
             await self._send_json("tool_call.result", {
                 "name": name,

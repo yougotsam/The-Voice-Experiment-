@@ -27,6 +27,7 @@ class ServerMessageType(str, Enum):
     PERSONA_LOADED = "persona.loaded"
     MODEL_LOADED = "model.loaded"
     TTS_LOADED = "tts.loaded"
+    ANALYTICS = "analytics"
 
 
 def encode_message(msg_type: ServerMessageType, data: dict[str, Any] | None = None) -> str:
