@@ -13,6 +13,8 @@ export type SessionAnalytics = {
   tool_calls_failed: number;
   tool_usage: Record<string, number>;
   persona_usage: Record<string, number>;
+  model_usage: Record<string, number>;
+  agent_usage: Record<string, number>;
 };
 
 type BusinessMetrics = {
@@ -155,6 +157,24 @@ function SessionView({ metrics }: { metrics: SessionAnalytics | null }) {
             Tool Usage
           </span>
           <ToolUsageBar usage={metrics.tool_usage} />
+        </div>
+      )}
+
+      {Object.keys(metrics.model_usage || {}).length > 0 && (
+        <div className="flex flex-col gap-1.5">
+          <span className="text-[9px] uppercase tracking-widest text-center" style={{ color: "rgba(244, 240, 234, 0.25)" }}>
+            Model Usage
+          </span>
+          <ToolUsageBar usage={metrics.model_usage} />
+        </div>
+      )}
+
+      {Object.keys(metrics.agent_usage || {}).length > 0 && (
+        <div className="flex flex-col gap-1.5">
+          <span className="text-[9px] uppercase tracking-widest text-center" style={{ color: "rgba(244, 240, 234, 0.25)" }}>
+            Agent Routing
+          </span>
+          <ToolUsageBar usage={metrics.agent_usage} />
         </div>
       )}
     </div>

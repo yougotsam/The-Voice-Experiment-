@@ -17,6 +17,8 @@ class SessionMetrics:
     tool_calls_failed: int = 0
     tool_usage: dict[str, int] = field(default_factory=dict)
     persona_usage: dict[str, int] = field(default_factory=dict)
+    model_usage: dict[str, int] = field(default_factory=dict)
+    agent_usage: dict[str, int] = field(default_factory=dict)
 
     def record_interaction(self, llm_ttfb_ms: float, tts_ttfb_ms: float, total_ms: float) -> None:
         self.llm_ttfb_samples.append(llm_ttfb_ms)
@@ -33,6 +35,12 @@ class SessionMetrics:
 
     def record_persona(self, persona_id: str) -> None:
         self.persona_usage[persona_id] = self.persona_usage.get(persona_id, 0) + 1
+
+    def record_model(self, model_id: str) -> None:
+        self.model_usage[model_id] = self.model_usage.get(model_id, 0) + 1
+
+    def record_agent(self, agent_id: str) -> None:
+        self.agent_usage[agent_id] = self.agent_usage.get(agent_id, 0) + 1
 
     def snapshot(self) -> dict:
         def avg(samples: list[float]) -> int:
@@ -56,4 +64,6 @@ class SessionMetrics:
             "tool_calls_failed": self.tool_calls_failed,
             "tool_usage": dict(self.tool_usage),
             "persona_usage": dict(self.persona_usage),
+            "model_usage": dict(self.model_usage),
+            "agent_usage": dict(self.agent_usage),
         }
