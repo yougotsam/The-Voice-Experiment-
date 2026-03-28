@@ -26,7 +26,7 @@ export function ProviderSelectors({ onModelChange, onTTSChange }: ProviderSelect
       .then((data) => {
         const list = data.models || [];
         setModels(list);
-        if (list.length > 0 && !activeModel) setActiveModel(list[0].id);
+        if (list.length > 0 && !activeModel) setActiveModel(data.default || list[0].id);
       })
       .catch(() => {});
 
@@ -35,7 +35,7 @@ export function ProviderSelectors({ onModelChange, onTTSChange }: ProviderSelect
       .then((data) => {
         const list = data.providers || [];
         setTTSProviders(list);
-        if (list.length > 0 && !activeTTS) setActiveTTS(list[0].id);
+        if (list.length > 0 && !activeTTS) setActiveTTS(data.default || list[0].id);
       })
       .catch(() => {});
   }, []);
