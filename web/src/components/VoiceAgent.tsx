@@ -13,6 +13,7 @@ import { TabPanel } from "./TabPanel";
 import { StagingArea, StagingEntry } from "./StagingArea";
 import { CRMPanel } from "./CRMPanel";
 import { ProviderSelectors } from "./ProviderSelectors";
+import { AnalyticsPanel, type SessionAnalytics } from "./AnalyticsPanel";
 import type { AgentState, InputMode, Metrics } from "@/types";
 
 const WS_URL = process.env.NEXT_PUBLIC_WS_URL || "ws://localhost:8000/ws";
@@ -30,6 +31,7 @@ export function VoiceAgent() {
   const [metrics, setMetrics] = useState<Metrics | null>(null);
   const [textInput, setTextInput] = useState("");
   const [stagingEntries, setStagingEntries] = useState<StagingEntry[]>([]);
+  const [sessionAnalytics, setSessionAnalytics] = useState<SessionAnalytics | null>(null);
   const agentTextBuffer = useRef("");
   const cappedSetEntries = useCallback(
     (updater: (prev: TranscriptEntry[]) => TranscriptEntry[]) => {
@@ -108,6 +110,9 @@ export function VoiceAgent() {
           break;
         case "metrics":
           setMetrics(msg as unknown as Metrics);
+          break;
+        case "analytics":
+          setSessionAnalytics(msg);
           break;
         case "status":
           if (msg.status === "idle") {
@@ -431,24 +436,7 @@ export function VoiceAgent() {
           transcript: <TranscriptPanel entries={entries} partialTranscript={partial} />,
           staging: <StagingArea entries={stagingEntries} />,
           crm: <CRMPanel />,
-          analytics: (
-            <div className="flex flex-col items-center justify-center py-12 gap-3">
-              <div className="h-10 w-10 rounded-full flex items-center justify-center"
-                style={{ border: "1px solid rgba(200, 169, 126, 0.15)" }}
-              >
-                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" style={{ color: "rgba(200, 169, 126, 0.3)" }}>
-                  <path d="M3 3v18h18" />
-                  <path d="m19 9-5 5-4-4-3 3" />
-                </svg>
-              </div>
-              <p className="text-[11px] uppercase tracking-widest" style={{ color: "rgba(244, 240, 234, 0.25)" }}>
-                Analytics
-              </p>
-              <p className="text-xs text-center max-w-[240px]" style={{ color: "rgba(244, 240, 234, 0.15)" }}>
-                Session metrics and usage insights coming soon
-              </p>
-            </div>
-          ),
+          analytics: <AnalyticsPanel sessionMetrics={sessionAnalytics} />,
         }}
       </TabPanel>
     </div>

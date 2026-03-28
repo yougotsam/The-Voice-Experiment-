@@ -18,6 +18,7 @@ from server.llm.models import get_model
 from server.tts.elevenlabs import ElevenLabsTTS
 from server.pipeline.orchestrator import Orchestrator
 from server.pipeline.session import ConversationSession
+from server.pipeline.metrics import SessionMetrics
 from server.tools.base import ToolRegistry
 from server.tools.ghl import (
     GHLContactSearch,
@@ -111,7 +112,8 @@ async def websocket_endpoint(ws: WebSocket) -> None:
             tool_registry.register(GHLGetConversations())
             logger.info("GHL tools enabled (%d tools) for session %s", len(tool_registry), session_id)
 
-        orchestrator = Orchestrator(stt, llm, tts, session, send_json, send_audio, send_status, tool_registry)
+        session_metrics = SessionMetrics(session_id)
+        orchestrator = Orchestrator(stt, llm, tts, session, send_json, send_audio, send_status, tool_registry, metrics=session_metrics)
 
         async def _ping_loop():
             try:
@@ -162,6 +164,7 @@ async def websocket_endpoint(ws: WebSocket) -> None:
                         if orchestrator:
                             await orchestrator.interrupt()
                         session.set_persona(persona_id)
+                        session_metrics.record_persona(persona_id)
                         await send_json(ServerMessageType.PERSONA_LOADED.value, {
                             "persona_id": session.persona.id,
                             "name": session.persona.name,
