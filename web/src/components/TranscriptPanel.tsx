@@ -3,7 +3,7 @@
 import { useEffect, useRef } from "react";
 
 export type TranscriptEntry = {
-  role: "user" | "agent" | "tool";
+  role: "user" | "agent" | "tool" | "system";
   text: string;
   timestamp: number;
   toolName?: string;
@@ -48,7 +48,16 @@ export function TranscriptPanel({
   return (
     <div>
       <div className="max-h-80 space-y-3 overflow-y-auto pr-1">
-        {entries.map((entry, i) => (
+        {entries.map((entry, i) => entry.role === "system" ? (
+          <div key={i} className="flex justify-center py-1">
+            <span
+              className="rounded-full px-3 py-0.5 text-[9px] font-medium uppercase tracking-widest"
+              style={{ color: "rgba(200, 169, 126, 0.6)", background: "rgba(200, 169, 126, 0.08)", border: "1px solid rgba(200, 169, 126, 0.15)" }}
+            >
+              {entry.text}
+            </span>
+          </div>
+        ) : (
           <div key={i} className="flex gap-3">
             <div
               className="mt-1.5 h-1.5 w-1.5 rounded-full shrink-0"

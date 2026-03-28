@@ -11,6 +11,8 @@ from server.tts.base import TTSProvider
 from server.pipeline.session import ConversationSession
 from server.pipeline.metrics import SessionMetrics
 from server.tools.base import ToolRegistry
+from server.agents.router import AgentRouter
+from server.agents.registry import get_agent
 
 logger = logging.getLogger(__name__)
 
@@ -50,6 +52,7 @@ class Orchestrator:
         send_status: Callable[[str], Awaitable[None]],
         tool_registry: ToolRegistry | None = None,
         metrics: SessionMetrics | None = None,
+        router: AgentRouter | None = None,
     ):
         self._stt = stt
         self._llm = llm
@@ -60,6 +63,7 @@ class Orchestrator:
         self._send_status = send_status
         self._tool_registry = tool_registry
         self._metrics = metrics
+        self._router = router
         self._processing_lock = asyncio.Lock()
         self._response_task: asyncio.Task | None = None
 
@@ -128,8 +132,17 @@ class Orchestrator:
             await self._send_status("processing")
             self._session.add_user_message(user_text)
 
-            tools = self._tool_registry.get_schemas() if self._tool_registry and len(self._tool_registry) > 0 else None
-            system_prompt = self._build_system_prompt(tools)
+            agent = get_agent("default")
+            active_tools = self._tool_registry
+            if self._router and self._router.should_route(user_text):
+                agent = await self._router.classify(user_text, self._llm)
+                if agent.tools and self._tool_registry:
+                    active_tools = self._tool_registry.subset(agent.tools)
+                if agent.id != "default":
+                    await self._send_json("agent.routed", {"agent_id": agent.id, "name": agent.name})
+
+            tools = active_tools.get_schemas() if active_tools and len(active_tools) > 0 else None
+            system_prompt = self._build_system_prompt(tools, agent.system_prompt_addon)
 
             llm_measured = False
             tts_measured = False
@@ -184,7 +197,7 @@ class Orchestrator:
                     break
 
                 self._session.add_assistant_tool_calls(full_response, tool_calls_result)
-                await self._execute_tool_calls(tool_calls_result)
+                await self._execute_tool_calls(tool_calls_result, active_tools)
             else:
                 logger.warning("Tool loop exhausted after %d rounds", MAX_TOOL_ROUNDS)
                 self._session.add_assistant_message(
@@ -209,8 +222,9 @@ class Orchestrator:
                 await self._send_json("analytics", self._metrics.snapshot())
             await self._send_status("idle")
 
-    async def _execute_tool_calls(self, tool_calls: list[dict]) -> None:
-        if not self._tool_registry:
+    async def _execute_tool_calls(self, tool_calls: list[dict], scoped_registry: ToolRegistry | None = None) -> None:
+        registry = scoped_registry or self._tool_registry
+        if not registry:
             return
         for tc in tool_calls:
             fn = tc.get("function", {})
@@ -223,7 +237,7 @@ class Orchestrator:
 
             await self._send_json("tool_call.start", {"name": name, "arguments": args})
 
-            tool = self._tool_registry.get(name)
+            tool = registry.get(name)
             if not tool:
                 result = {"error": f"Unknown tool: {name}"}
             else:
@@ -244,8 +258,10 @@ class Orchestrator:
             })
             self._session.add_tool_result(tc_id, name, result)
 
-    def _build_system_prompt(self, tools: list[dict] | None) -> str:
+    def _build_system_prompt(self, tools: list[dict] | None, agent_addon: str = "") -> str:
         base = self._session.system_prompt
+        if agent_addon:
+            base = base + "\n\n" + agent_addon
         if not tools:
             return base + NO_TOOLS_NOTICE
         tool_lines: list[str] = []

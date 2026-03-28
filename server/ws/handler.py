@@ -19,6 +19,7 @@ from server.tts.elevenlabs import ElevenLabsTTS
 from server.pipeline.orchestrator import Orchestrator
 from server.pipeline.session import ConversationSession
 from server.pipeline.metrics import SessionMetrics
+from server.agents.router import AgentRouter
 from server.tools.base import ToolRegistry
 from server.tools.ghl import (
     GHLContactSearch,
@@ -113,7 +114,8 @@ async def websocket_endpoint(ws: WebSocket) -> None:
             logger.info("GHL tools enabled (%d tools) for session %s", len(tool_registry), session_id)
 
         session_metrics = SessionMetrics(session_id)
-        orchestrator = Orchestrator(stt, llm, tts, session, send_json, send_audio, send_status, tool_registry, metrics=session_metrics)
+        agent_router = AgentRouter()
+        orchestrator = Orchestrator(stt, llm, tts, session, send_json, send_audio, send_status, tool_registry, metrics=session_metrics, router=agent_router)
 
         async def _ping_loop():
             try:

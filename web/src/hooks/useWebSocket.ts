@@ -18,6 +18,7 @@ export type ServerMessage = {
   greeting?: string;
   model_id?: string;
   provider?: string;
+  agent_id?: string;
 };
 
 type UseWebSocketOptions = {

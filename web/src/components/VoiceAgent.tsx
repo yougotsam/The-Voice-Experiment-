@@ -112,7 +112,7 @@ export function VoiceAgent() {
           setMetrics(msg as unknown as Metrics);
           break;
         case "analytics":
-          setSessionAnalytics(msg);
+          setSessionAnalytics(msg as unknown as SessionAnalytics);
           break;
         case "status":
           if (msg.status === "idle") {
@@ -168,6 +168,14 @@ export function VoiceAgent() {
             cappedSetEntries((prev) => [
               ...prev,
               { role: "agent", text: greetingText, timestamp: Date.now() },
+            ]);
+          }
+          break;
+        case "agent.routed":
+          if (msg.name) {
+            cappedSetEntries((prev) => [
+              ...prev,
+              { role: "system" as const, text: msg.name!, timestamp: Date.now() },
             ]);
           }
           break;
