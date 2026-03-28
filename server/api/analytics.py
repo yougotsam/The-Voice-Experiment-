@@ -35,12 +35,20 @@ async def business_metrics():
         result["total_contacts"] = 0
 
     try:
-        opps_resp = await client.get(
-            f"{GHL_BASE}/opportunities/search",
-            params={"locationId": settings.ghl_location_id, "limit": 50, "order": "desc"},
-        )
-        if opps_resp.status_code == 200:
-            opps = opps_resp.json().get("opportunities") or []
+        opps: list = []
+        params: dict = {"locationId": settings.ghl_location_id, "limit": 100, "order": "desc"}
+        for _ in range(10):
+            opps_resp = await client.get(f"{GHL_BASE}/opportunities/search", params=params)
+            if opps_resp.status_code != 200:
+                break
+            page = opps_resp.json()
+            opps.extend(page.get("opportunities") or [])
+            next_cursor = page.get("meta", {}).get("nextPageUrl") or page.get("meta", {}).get("nextAfter")
+            if not next_cursor:
+                break
+            params["startAfter"] = next_cursor
+            params["startAfterId"] = next_cursor
+        if opps:
             total_value = 0.0
             won = 0
             lost = 0

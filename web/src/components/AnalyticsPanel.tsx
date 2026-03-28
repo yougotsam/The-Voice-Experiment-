@@ -2,7 +2,7 @@
 
 import { useCallback, useEffect, useState } from "react";
 
-type SessionAnalytics = {
+export type SessionAnalytics = {
   session_duration_s: number;
   message_count: number;
   avg_llm_ttfb_ms: number;
@@ -82,7 +82,7 @@ function Sparkline({ data, height = 48 }: { data: number[]; height?: number }) {
 function ToolUsageBar({ usage }: { usage: Record<string, number> }) {
   const entries = Object.entries(usage).sort((a, b) => b[1] - a[1]);
   if (entries.length === 0) return null;
-  const max = entries[0][1];
+  const max = entries[0][1] || 1;
   return (
     <div className="flex flex-col gap-1.5 w-full">
       {entries.map(([name, count]) => (

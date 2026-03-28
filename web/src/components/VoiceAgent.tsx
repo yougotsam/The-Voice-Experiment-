@@ -31,8 +31,7 @@ export function VoiceAgent() {
   const [metrics, setMetrics] = useState<Metrics | null>(null);
   const [textInput, setTextInput] = useState("");
   const [stagingEntries, setStagingEntries] = useState<StagingEntry[]>([]);
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  const [sessionAnalytics, setSessionAnalytics] = useState<any>(null);
+  const [sessionAnalytics, setSessionAnalytics] = useState<SessionAnalytics | null>(null);
   const agentTextBuffer = useRef("");
   const cappedSetEntries = useCallback(
     (updater: (prev: TranscriptEntry[]) => TranscriptEntry[]) => {
