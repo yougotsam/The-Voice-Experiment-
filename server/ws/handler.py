@@ -14,6 +14,7 @@ from server.ws.protocol import (
 )
 from server.stt.assemblyai import AssemblyAISTT
 from server.llm.openai_compat import OpenAICompatLLM
+from server.llm.models import get_model
 from server.tts.elevenlabs import ElevenLabsTTS
 from server.pipeline.orchestrator import Orchestrator
 from server.pipeline.session import ConversationSession
@@ -35,6 +36,7 @@ logger = logging.getLogger(__name__)
 router = APIRouter()
 
 MAX_TEXT_LENGTH = 2000
+VALID_TTS_PROVIDERS = {"groq", "elevenlabs", "piper", "dia2", "csm"}
 
 
 def _create_single_tts(provider: str):
@@ -152,16 +154,53 @@ async def websocket_endpoint(ws: WebSocket) -> None:
                     if text:
                         await orchestrator.process_text_input(text)
                 elif msg_type == ClientMessageType.CONFIG:
-                    persona_id = msg.get("persona_id", "default")
-                    if orchestrator:
-                        await orchestrator.interrupt()
-                    session.set_persona(persona_id)
-                    await send_json(ServerMessageType.PERSONA_LOADED.value, {
-                        "persona_id": session.persona.id,
-                        "name": session.persona.name,
-                        "greeting": session.persona.greeting,
-                    })
-                    await send_status("idle")
+                    persona_id = msg.get("persona_id")
+                    model_id = msg.get("model_id")
+                    tts_provider_id = msg.get("tts_provider")
+
+                    if persona_id:
+                        if orchestrator:
+                            await orchestrator.interrupt()
+                        session.set_persona(persona_id)
+                        await send_json(ServerMessageType.PERSONA_LOADED.value, {
+                            "persona_id": session.persona.id,
+                            "name": session.persona.name,
+                            "greeting": session.persona.greeting,
+                        })
+                        await send_status("idle")
+
+                    if model_id:
+                        model_cfg = get_model(model_id)
+                        if not model_cfg:
+                            await send_json("error", {"text": f"Unknown model: {model_id}"})
+                        else:
+                            api_key = getattr(settings, model_cfg.api_key_setting, "")
+                            if api_key:
+                                llm.set_model(model_cfg.model, model_cfg.base_url, api_key)
+                                await send_json(ServerMessageType.MODEL_LOADED.value, {
+                                    "model_id": model_cfg.id,
+                                    "name": model_cfg.name,
+                                })
+                                logger.info("Model switched to %s for session %s", model_cfg.id, session_id)
+                            else:
+                                await send_json("error", {"text": f"API key not configured for {model_cfg.provider}"})
+
+                    if tts_provider_id:
+                        if tts_provider_id not in VALID_TTS_PROVIDERS:
+                            await send_json("error", {"text": f"Unknown TTS provider: {tts_provider_id}"})
+                        else:
+                            try:
+                                new_tts = _create_single_tts(tts_provider_id)
+                                if orchestrator:
+                                    await orchestrator.set_tts(new_tts)
+                                tts = new_tts
+                                await send_json(ServerMessageType.TTS_LOADED.value, {
+                                    "provider": tts_provider_id,
+                                })
+                                logger.info("TTS switched to %s for session %s", tts_provider_id, session_id)
+                            except Exception:
+                                logger.exception("Failed to switch TTS to %s", tts_provider_id)
+                                await send_json("error", {"text": f"Failed to load TTS provider: {tts_provider_id}"})
 
     except WebSocketDisconnect:
         logger.info("WS disconnected: %s", session_id)

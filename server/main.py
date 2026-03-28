@@ -8,6 +8,7 @@ from contextlib import asynccontextmanager
 from server.config import settings
 from server.ws.handler import router as ws_router
 from server.api.crm import router as crm_router
+from server.api.providers import router as providers_router
 from server.tools.ghl import close_ghl_client
 
 logging.basicConfig(
@@ -33,6 +34,7 @@ app.add_middleware(
 
 app.include_router(ws_router)
 app.include_router(crm_router)
+app.include_router(providers_router)
 
 
 @app.get("/health")

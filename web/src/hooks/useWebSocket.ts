@@ -16,6 +16,8 @@ export type ServerMessage = {
   summary?: string;
   persona_id?: string;
   greeting?: string;
+  model_id?: string;
+  provider?: string;
 };
 
 type UseWebSocketOptions = {
