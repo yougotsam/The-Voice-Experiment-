@@ -300,6 +300,12 @@ class Orchestrator:
             if started:
                 await self._send_json("agent.audio.end", {})
 
+    async def set_tts(self, new_tts: TTSProvider) -> None:
+        old_tts = self._tts
+        self._tts = new_tts
+        if old_tts:
+            await old_tts.close()
+
     async def shutdown(self) -> None:
         if self._response_task and not self._response_task.done():
             self._response_task.cancel()

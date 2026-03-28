@@ -68,8 +68,8 @@ _register(
 )
 
 
-def get_model(model_id: str) -> ModelConfig:
-    return MODEL_REGISTRY.get(model_id, MODEL_REGISTRY["groq-llama-70b"])
+def get_model(model_id: str) -> ModelConfig | None:
+    return MODEL_REGISTRY.get(model_id)
 
 
 def list_available_models() -> list[dict[str, str]]:
