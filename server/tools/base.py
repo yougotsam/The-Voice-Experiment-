@@ -42,5 +42,13 @@ class ToolRegistry:
     def get_schemas(self) -> list[dict]:
         return [t.schema() for t in self._tools.values()]
 
+    def subset(self, names: list[str]) -> "ToolRegistry":
+        registry = ToolRegistry()
+        for name in names:
+            tool = self._tools.get(name)
+            if tool:
+                registry.register(tool)
+        return registry
+
     def __len__(self) -> int:
         return len(self._tools)
