@@ -197,7 +197,7 @@ class Orchestrator:
                     break
 
                 self._session.add_assistant_tool_calls(full_response, tool_calls_result)
-                await self._execute_tool_calls(tool_calls_result)
+                await self._execute_tool_calls(tool_calls_result, active_tools)
             else:
                 logger.warning("Tool loop exhausted after %d rounds", MAX_TOOL_ROUNDS)
                 self._session.add_assistant_message(
@@ -222,8 +222,9 @@ class Orchestrator:
                 await self._send_json("analytics", self._metrics.snapshot())
             await self._send_status("idle")
 
-    async def _execute_tool_calls(self, tool_calls: list[dict]) -> None:
-        if not self._tool_registry:
+    async def _execute_tool_calls(self, tool_calls: list[dict], scoped_registry: ToolRegistry | None = None) -> None:
+        registry = scoped_registry or self._tool_registry
+        if not registry:
             return
         for tc in tool_calls:
             fn = tc.get("function", {})
@@ -236,7 +237,7 @@ class Orchestrator:
 
             await self._send_json("tool_call.start", {"name": name, "arguments": args})
 
-            tool = self._tool_registry.get(name)
+            tool = registry.get(name)
             if not tool:
                 result = {"error": f"Unknown tool: {name}"}
             else:
