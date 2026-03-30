@@ -140,6 +140,8 @@ class Orchestrator:
                     active_tools = self._tool_registry.subset(agent.tools)
                 if agent.id != "default":
                     await self._send_json("agent.routed", {"agent_id": agent.id, "name": agent.name})
+            if self._metrics:
+                self._metrics.record_agent(agent.id)
 
             tools = active_tools.get_schemas() if active_tools and len(active_tools) > 0 else None
             system_prompt = self._build_system_prompt(tools, agent.system_prompt_addon)

@@ -182,6 +182,7 @@ async def websocket_endpoint(ws: WebSocket) -> None:
                             api_key = getattr(settings, model_cfg.api_key_setting, "")
                             if api_key:
                                 llm.set_model(model_cfg.model, model_cfg.base_url, api_key)
+                                session_metrics.record_model(model_cfg.id)
                                 await send_json(ServerMessageType.MODEL_LOADED.value, {
                                     "model_id": model_cfg.id,
                                     "name": model_cfg.name,
