@@ -142,12 +142,13 @@ class Orchestrator:
                     if len(scoped) > 0:
                         active_tools = scoped
                     else:
+                        integration = agent.integration_name or "the required integration"
                         integration_notice = (
                             f"\n\nNOTE: The user's request relates to {agent.name.lower()} capabilities, "
-                            "but the required integration (GoHighLevel CRM) is not connected. "
-                            "Tell the user clearly that this feature requires connecting their "
-                            "GoHighLevel account, and they need to add their GHL API key and "
-                            "Location ID to the environment configuration to enable it."
+                            f"but {integration} is not connected. "
+                            f"Tell the user clearly that this feature requires connecting "
+                            f"{integration} by adding the appropriate API credentials "
+                            "to the environment configuration."
                         )
                         agent = get_agent("default")
                 if agent.id != "default":

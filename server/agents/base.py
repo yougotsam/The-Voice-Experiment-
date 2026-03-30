@@ -11,3 +11,4 @@ class AgentConfig:
     system_prompt_addon: str
     tools: list[str] = field(default_factory=list)
     model_id: str | None = None
+    integration_name: str = ""
