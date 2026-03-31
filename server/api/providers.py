@@ -12,6 +12,7 @@ TTS_PROVIDERS = [
     {"id": "elevenlabs", "name": "ElevenLabs", "key_setting": "elevenlabs_api_key"},
     {"id": "deepgram", "name": "Deepgram (Aura-2)", "key_setting": "deepgram_api_key"},
     {"id": "cartesia", "name": "Cartesia (Sonic)", "key_setting": "cartesia_api_key"},
+    {"id": "piper", "name": "Piper (Local)", "key_setting": None},
 ]
 
 
@@ -80,6 +81,9 @@ VOICE_OPTIONS: dict[str, list[dict[str, str]]] = {
         {"id": "aura-2-orion-en", "name": "Orion (Male, Deep)"},
         {"id": "aura-2-perseus-en", "name": "Perseus (Male, Strong)"},
     ],
+    "piper": [
+        {"id": "en_US-lessac-medium", "name": "Lessac (Default)"},
+    ],
     "cartesia": [
         {"id": "79a125e8-cd45-4c13-8a67-188112f4dd22", "name": "British Lady"},
         {"id": "b7d50908-b17c-442d-ad8d-7c56e74dd5d8", "name": "California Girl"},
@@ -111,4 +115,6 @@ async def get_voices(provider_id: str):
         default = settings.deepgram_tts_voice
     elif provider_id == "cartesia":
         default = settings.cartesia_voice_id
+    elif provider_id == "piper":
+        default = "en_US-lessac-medium"
     return {"voices": voices, "default": default}

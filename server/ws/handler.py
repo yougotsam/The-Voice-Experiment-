@@ -39,7 +39,7 @@ logger = logging.getLogger(__name__)
 router = APIRouter()
 
 MAX_TEXT_LENGTH = 2000
-VALID_TTS_PROVIDERS = {"groq", "elevenlabs", "xai", "deepgram", "cartesia"}
+VALID_TTS_PROVIDERS = {"groq", "elevenlabs", "xai", "deepgram", "cartesia", "piper"}
 
 
 def _create_single_tts(provider: str):
@@ -55,6 +55,9 @@ def _create_single_tts(provider: str):
     if provider == "cartesia":
         from server.tts.cartesia import CartesiaTTS
         return CartesiaTTS(settings.cartesia_api_key, settings.cartesia_voice_id)
+    if provider == "piper":
+        from server.tts.piper import PiperTTS
+        return PiperTTS()
     if provider == "elevenlabs":
         return ElevenLabsTTS(settings.elevenlabs_api_key, settings.elevenlabs_voice_id)
     logger.warning("Unknown TTS provider '%s', falling back to ElevenLabs", provider)
