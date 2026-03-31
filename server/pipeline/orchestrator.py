@@ -147,8 +147,7 @@ class Orchestrator:
                 except Exception:
                     logger.exception("Fallback LLM also failed")
             logger.exception("Response pipeline failed")
-            detail = str(exc)[:200] if str(exc) else exc_name
-            await self._send_json("error", {"text": f"Response failed: {detail}"})
+            await self._send_json("error", {"text": "Response failed. Check server logs for details."})
             await self._send_status("idle")
 
     async def process_text_input(self, text: str) -> None:
@@ -369,8 +368,7 @@ class Orchestrator:
             raise
         except Exception as exc:
             logger.exception("TTS synthesis failed for: %s", text[:50])
-            detail = str(exc)[:300] if str(exc) else type(exc).__name__
-            await self._send_json("error", {"text": f"Voice synthesis failed: {detail}"})
+            await self._send_json("error", {"text": "Voice synthesis failed. Check server logs for details."})
         finally:
             if started:
                 await self._send_json("agent.audio.end", {})

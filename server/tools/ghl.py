@@ -37,7 +37,7 @@ def _safe_ghl(func):
             return {"error": "GoHighLevel took too long to respond. Try again."}
         except Exception as exc:
             logger.exception("GHL %s unexpected error", self.name)
-            return {"error": f"GHL error: {type(exc).__name__}"}
+            return {"error": "Unexpected GHL error. Check server logs for details."}
     return wrapper
 
 GHL_BASE = "https://services.leadconnectorhq.com"
