@@ -27,6 +27,7 @@ class ServerMessageType(str, Enum):
     PERSONA_LOADED = "persona.loaded"
     MODEL_LOADED = "model.loaded"
     TTS_LOADED = "tts.loaded"
+    VOICE_LOADED = "voice.loaded"
     ANALYTICS = "analytics"
     AGENT_ROUTED = "agent.routed"
     WEBHOOK_EVENT = "webhook.event"
