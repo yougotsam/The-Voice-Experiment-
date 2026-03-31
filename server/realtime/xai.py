@@ -143,9 +143,14 @@ class XaiRealtimeSession:
         for tc in calls:
             name = tc["name"]
             call_id = tc["call_id"]
+            raw_args = tc.get("arguments", "{}")
             try:
-                args = json.loads(tc.get("arguments", "{}"))
-            except json.JSONDecodeError:
+                args = json.loads(raw_args)
+            except json.JSONDecodeError as exc:
+                logger.warning(
+                    "Failed to decode tool arguments for call_id=%s name=%s: %r (%s)",
+                    call_id, name, raw_args, exc,
+                )
                 args = {}
 
             if self._on_tool_start:

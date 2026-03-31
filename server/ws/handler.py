@@ -260,8 +260,15 @@ async def websocket_endpoint(ws: WebSocket) -> None:
                                         await send_json("tool_call.start", {"name": name, "arguments": args})
 
                                     async def _rt_on_tool_result(name: str, result: dict) -> None:
-                                        success = "error" not in result
-                                        summary = result.get("error", json.dumps(result)[:200]) if not success else json.dumps(result)[:200]
+                                        success = not (isinstance(result, dict) and "error" in result)
+                                        try:
+                                            serialized = json.dumps(result)
+                                        except (TypeError, ValueError):
+                                            serialized = str(result)
+                                        if not success and isinstance(result, dict):
+                                            summary = str(result.get("error", ""))[:200]
+                                        else:
+                                            summary = serialized[:200]
                                         await send_json("tool_call.result", {"name": name, "success": success, "summary": summary})
 
                                     await realtime_session.connect(
