@@ -85,6 +85,7 @@ export function EngineSelector({ onModelChange, onTTSChange, onVoiceChange, serv
       setActiveModel(modelData.default || m[0]?.id || "");
       setActiveTTS(ttsData.default || t[0]?.id || "");
       setEngines(buildEngines(m, t));
+    }).finally(() => {
       setLoading(false);
     });
   }, []);
