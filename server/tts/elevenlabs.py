@@ -15,12 +15,27 @@ logger = logging.getLogger(__name__)
 ELEVENLABS_WS_URL = "wss://api.elevenlabs.io/v1/text-to-speech/{voice_id}/stream-input"
 
 
+KNOWN_VOICES = {
+    "JBFqnCBsd6RMkjVDRZzb",
+    "EXAVITQu4vr4xnSDxMaL",
+    "pFZP5JQG7iQjIQuC4Bku",
+    "TX3LPaxmHKxFdv7VOQHJ",
+    "XB0fDUnXU5powFXDhCwa",
+    "pqHfZKP75CvOlQylNhV4",
+    "nPczCjzI2devNBz1zQrb",
+    "bIHbv24MWmeRgasZH58o",
+}
+
+
 class ElevenLabsTTS(TTSProvider):
     def __init__(self, api_key: str, voice_id: str):
         self._api_key = api_key
         self._voice_id = voice_id
 
     def set_voice(self, voice: str) -> bool:
+        if KNOWN_VOICES and voice not in KNOWN_VOICES:
+            logger.warning("Unknown ElevenLabs voice '%s', keeping '%s'", voice, self._voice_id)
+            return False
         self._voice_id = voice
         logger.info("ElevenLabs TTS voice changed to '%s'", voice)
         return True

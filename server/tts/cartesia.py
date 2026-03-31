@@ -83,21 +83,5 @@ class CartesiaTTS(TTSProvider):
 
             yield response.content
 
-    @classmethod
-    def _split_text(cls, text: str) -> list[str]:
-        if len(text) <= cls.MAX_INPUT_CHARS:
-            return [text]
-        chunks: list[str] = []
-        while text:
-            if len(text) <= cls.MAX_INPUT_CHARS:
-                chunks.append(text)
-                break
-            idx = text.rfind(" ", 0, cls.MAX_INPUT_CHARS)
-            if idx <= 0:
-                idx = cls.MAX_INPUT_CHARS
-            chunks.append(text[:idx].rstrip())
-            text = text[idx:].lstrip()
-        return chunks
-
     async def close(self) -> None:
         await self._client.aclose()
