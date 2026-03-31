@@ -20,6 +20,7 @@ const STUCK_TIMEOUT_MS = 30000;
 const MAX_ENTRIES = 200;
 const MAX_TEXT_INPUT = 2000;
 const MAX_STAGING_ENTRIES = 50;
+const VAD_COOLDOWN_MS = 1200;
 
 type MobileTab = "conversation" | "voice" | "intel";
 
@@ -38,6 +39,7 @@ export function VoiceAgent() {
   const [intelTab, setIntelTab] = useState<"crm" | "analytics">("crm");
   const [crmRefreshKey, setCrmRefreshKey] = useState(0);
   const agentTextBuffer = useRef("");
+  const lastSpeakingEnd = useRef(0);
   const cappedSetEntries = useCallback(
     (updater: (prev: TranscriptEntry[]) => TranscriptEntry[]) => {
       setEntries((prev) => {
@@ -112,6 +114,7 @@ export function VoiceAgent() {
           setAgentState("speaking");
           break;
         case "agent.audio.end":
+          lastSpeakingEnd.current = Date.now();
           break;
         case "metrics":
           setMetrics(msg as unknown as Metrics);
@@ -339,6 +342,7 @@ export function VoiceAgent() {
   useVAD({
     enabled: inputMode === "vad" && connected,
     onSpeechStart: async () => {
+      if (Date.now() - lastSpeakingEnd.current < VAD_COOLDOWN_MS) return;
       if (stateRef.current === "speaking" || stateRef.current === "processing") {
         doInterrupt();
       }

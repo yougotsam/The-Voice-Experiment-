@@ -8,10 +8,10 @@ class Settings(BaseSettings):
     llm_model: str = "llama-3.3-70b-versatile"
     elevenlabs_api_key: str = ""
     elevenlabs_voice_id: str = "JBFqnCBsd6RMkjVDRZzb"
-    groq_tts_voice: str = "troy"
+    groq_tts_voice: str = "autumn"
     groq_tts_model: str = "canopylabs/orpheus-v1-english"
-    tts_provider: str = "elevenlabs"
-    tts_fallback_chain: str = "groq,elevenlabs"
+    tts_provider: str = "fallback"
+    tts_fallback_chain: str = "groq,elevenlabs,piper"
     host: str = "0.0.0.0"
     port: int = 8000
     gemini_api_key: str = ""

@@ -13,8 +13,12 @@ from server.pipeline.metrics import SessionMetrics
 from server.tools.base import ToolRegistry
 from server.agents.router import AgentRouter
 from server.agents.registry import get_agent
+from server.llm.models import MODEL_REGISTRY
+from server.config import settings
 
 logger = logging.getLogger(__name__)
+
+LLM_FALLBACK_ORDER = ["groq-llama-70b", "gemini-flash", "xai-grok-3", "groq-llama-8b", "xai-grok-mini"]
 
 SENTENCE_END = re.compile(r"(?<=[.!?])\s+")
 MAX_TOOL_ROUNDS = 3
@@ -66,6 +70,45 @@ class Orchestrator:
         self._router = router
         self._processing_lock = asyncio.Lock()
         self._response_task: asyncio.Task | None = None
+        self._primary_llm_config: tuple[str, str, str] | None = None
+
+    def _save_primary_llm(self) -> None:
+        if self._primary_llm_config is None:
+            cfg = self._resolve_current_llm_config()
+            if cfg:
+                self._primary_llm_config = cfg
+
+    def _resolve_current_llm_config(self) -> tuple[str, str, str] | None:
+        current_model = self._llm.model
+        for cfg in MODEL_REGISTRY.values():
+            if cfg.model == current_model:
+                api_key = getattr(settings, cfg.api_key_setting, "")
+                if api_key:
+                    return (cfg.model, cfg.base_url, api_key)
+        return None
+
+    def _restore_primary_llm(self) -> None:
+        if self._primary_llm_config:
+            model, base_url, api_key = self._primary_llm_config
+            if self._llm.model != model:
+                logger.info("Restoring primary LLM: %s", model)
+                self._llm.set_model(model, base_url, api_key)
+
+    def _try_llm_fallback(self) -> bool:
+        self._save_primary_llm()
+        for model_id in LLM_FALLBACK_ORDER:
+            cfg = MODEL_REGISTRY.get(model_id)
+            if not cfg:
+                continue
+            api_key = getattr(settings, cfg.api_key_setting, "")
+            if not api_key:
+                continue
+            if cfg.model == self._llm.model:
+                continue
+            logger.info("LLM fallback: switching to %s", cfg.name)
+            self._llm.set_model(cfg.model, cfg.base_url, api_key)
+            return True
+        return False
 
     async def start_listening(self) -> None:
         await self._stt.stop()
@@ -115,9 +158,21 @@ class Orchestrator:
             await self._process_response(text)
         except asyncio.CancelledError:
             logger.info("Response cancelled (interrupted)")
-        except Exception:
+        except Exception as exc:
+            exc_name = type(exc).__name__
+            is_rate_limit = "RateLimit" in exc_name or "429" in str(exc)
+            if is_rate_limit and self._try_llm_fallback():
+                logger.info("Retrying with fallback LLM after rate limit")
+                await self._send_json("status", {"text": "Switching to backup model..."})
+                try:
+                    await self._process_response(text)
+                    return
+                except Exception:
+                    logger.exception("Fallback LLM also failed")
+                finally:
+                    self._restore_primary_llm()
             logger.exception("Response pipeline failed")
-            await self._send_json("error", {"text": "An error occurred while generating a response."})
+            await self._send_json("error", {"text": "Response failed. Check server logs for details."})
             await self._send_status("idle")
 
     async def process_text_input(self, text: str) -> None:
@@ -338,8 +393,7 @@ class Orchestrator:
             raise
         except Exception as exc:
             logger.exception("TTS synthesis failed for: %s", text[:50])
-            detail = str(exc)[:300] if str(exc) else type(exc).__name__
-            await self._send_json("error", {"text": f"Voice synthesis failed: {detail}"})
+            await self._send_json("error", {"text": "Voice synthesis failed. Check server logs for details."})
         finally:
             if started:
                 await self._send_json("agent.audio.end", {})
