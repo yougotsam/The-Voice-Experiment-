@@ -212,6 +212,11 @@ async def websocket_endpoint(ws: WebSocket) -> None:
 
     except WebSocketDisconnect:
         logger.info("WS disconnected: %s", session_id)
+    except RuntimeError as exc:
+        if str(exc) == 'Cannot call "receive" once a disconnect message has been received.':
+            logger.info("WS disconnected (runtime): %s", session_id)
+        else:
+            raise
     except Exception:
         logger.exception("WS error: %s", session_id)
     finally:
