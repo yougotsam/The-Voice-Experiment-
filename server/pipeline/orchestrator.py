@@ -70,9 +70,32 @@ class Orchestrator:
         self._router = router
         self._processing_lock = asyncio.Lock()
         self._response_task: asyncio.Task | None = None
+        self._primary_llm_config: tuple[str, str, str] | None = None
+
+    def _save_primary_llm(self) -> None:
+        if self._primary_llm_config is None:
+            cfg = self._resolve_current_llm_config()
+            if cfg:
+                self._primary_llm_config = cfg
+
+    def _resolve_current_llm_config(self) -> tuple[str, str, str] | None:
+        current_model = self._llm.model
+        for cfg in MODEL_REGISTRY.values():
+            if cfg.model == current_model:
+                api_key = getattr(settings, cfg.api_key_setting, "")
+                if api_key:
+                    return (cfg.model, cfg.base_url, api_key)
+        return None
+
+    def _restore_primary_llm(self) -> None:
+        if self._primary_llm_config:
+            model, base_url, api_key = self._primary_llm_config
+            if self._llm.model != model:
+                logger.info("Restoring primary LLM: %s", model)
+                self._llm.set_model(model, base_url, api_key)
 
     def _try_llm_fallback(self) -> bool:
-        from server.llm.openai_compat import _make_openai_client
+        self._save_primary_llm()
         for model_id in LLM_FALLBACK_ORDER:
             cfg = MODEL_REGISTRY.get(model_id)
             if not cfg:
@@ -146,6 +169,8 @@ class Orchestrator:
                     return
                 except Exception:
                     logger.exception("Fallback LLM also failed")
+                finally:
+                    self._restore_primary_llm()
             logger.exception("Response pipeline failed")
             await self._send_json("error", {"text": "Response failed. Check server logs for details."})
             await self._send_status("idle")
