@@ -7,13 +7,12 @@ import { useAudioPlayback } from "@/hooks/useAudioPlayback";
 import { useVAD } from "@/hooks/useVAD";
 import { TranscriptPanel, TranscriptEntry } from "./TranscriptPanel";
 import { MetricsOverlay } from "./MetricsOverlay";
-import { PersonaSelector } from "./PersonaSelector";
 import { VoiceOrb } from "./VoiceOrb";
-import { TabPanel } from "./TabPanel";
-import { StagingArea, StagingEntry } from "./StagingArea";
 import { CRMPanel } from "./CRMPanel";
-import { ProviderSelectors } from "./ProviderSelectors";
+import { EngineSelector } from "./EngineSelector";
 import { AnalyticsPanel, type SessionAnalytics } from "./AnalyticsPanel";
+import { PERSONAS } from "./PersonaSelector";
+import type { StagingEntry } from "./StagingArea";
 import type { AgentState, InputMode, Metrics } from "@/types";
 
 const WS_URL = process.env.NEXT_PUBLIC_WS_URL || "ws://localhost:8000/ws";
@@ -21,6 +20,8 @@ const STUCK_TIMEOUT_MS = 30000;
 const MAX_ENTRIES = 200;
 const MAX_TEXT_INPUT = 2000;
 const MAX_STAGING_ENTRIES = 50;
+
+type MobileTab = "conversation" | "voice" | "intel";
 
 export function VoiceAgent() {
   const [state, setState] = useState<AgentState>("idle");
@@ -32,6 +33,9 @@ export function VoiceAgent() {
   const [textInput, setTextInput] = useState("");
   const [stagingEntries, setStagingEntries] = useState<StagingEntry[]>([]);
   const [sessionAnalytics, setSessionAnalytics] = useState<SessionAnalytics | null>(null);
+  const [mobileTab, setMobileTab] = useState<MobileTab>("voice");
+  const [activePersona, setActivePersona] = useState("default");
+  const [intelTab, setIntelTab] = useState<"crm" | "analytics">("crm");
   const agentTextBuffer = useRef("");
   const cappedSetEntries = useCallback(
     (updater: (prev: TranscriptEntry[]) => TranscriptEntry[]) => {
@@ -268,6 +272,7 @@ export function VoiceAgent() {
 
   const handlePersona = useCallback(
     (personaId: string) => {
+      setActivePersona(personaId);
       cleanupActiveSession();
       stopPlayback();
       agentTextBuffer.current = "";
@@ -347,108 +352,218 @@ export function VoiceAgent() {
     speaking: "Speaking",
   };
 
-  const tabs = useMemo(() => [
-    { id: "transcript", label: "Transcript", badge: entries.length || undefined },
-    { id: "staging", label: "Staging", badge: stagingEntries.length || undefined },
-    { id: "crm", label: "CRM" },
-    { id: "analytics", label: "Analytics" },
-  ], [entries.length, stagingEntries.length]);
+  const mobileTabs: { id: MobileTab; label: string; icon: React.ReactNode }[] = useMemo(() => [
+    {
+      id: "conversation",
+      label: "Chat",
+      icon: (
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round">
+          <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z" />
+        </svg>
+      ),
+    },
+    {
+      id: "voice",
+      label: "Voice",
+      icon: (
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round">
+          <path d="M12 1a3 3 0 0 0-3 3v8a3 3 0 0 0 6 0V4a3 3 0 0 0-3-3z" />
+          <path d="M19 10v2a7 7 0 0 1-14 0v-2" />
+          <line x1="12" x2="12" y1="19" y2="23" />
+          <line x1="8" x2="16" y1="23" y2="23" />
+        </svg>
+      ),
+    },
+    {
+      id: "intel",
+      label: "Intel",
+      icon: (
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round">
+          <path d="M18 20V10" /><path d="M12 20V4" /><path d="M6 20v-6" />
+        </svg>
+      ),
+    },
+  ], []);
 
   return (
-    <div className="flex w-full max-w-2xl flex-col items-center gap-5 relative z-10">
-      <div className="flex flex-col items-center gap-1">
-        <h1 className="text-3xl font-heading font-semibold tracking-wide text-ivory">
+    <div className="flex flex-col h-full overflow-hidden relative z-10">
+      <div className="noise-overlay" />
+
+      <header
+        className="glass-panel flex items-center gap-3 px-4 py-2.5 shrink-0 z-20 rounded-none"
+        style={{ borderTop: "none", borderLeft: "none", borderRight: "none" }}
+      >
+        <h1 className="text-lg font-heading font-semibold tracking-wide text-ivory shrink-0">
           ZeebsOS
         </h1>
-        <div className="flex items-center gap-3 mt-2">
-          <div className="flex items-center gap-1.5">
-            <div className={`h-1.5 w-1.5 rounded-full transition-colors duration-500 ${connected ? "bg-gold shadow-[0_0_6px_rgba(200,169,126,0.5)]" : "bg-red-400/60"}`} />
-            <span className="text-[10px] uppercase tracking-widest" style={{ color: "rgba(244, 240, 234, 0.4)" }}>
-              {connected ? "Online" : "Offline"}
-            </span>
-          </div>
-          <div className="w-px h-3" style={{ background: "rgba(200, 169, 126, 0.15)" }} />
-          <button
-            type="button"
-            onClick={handleModeSwitch}
-            className="text-[10px] uppercase tracking-widest px-2 py-0.5 rounded-full transition-all duration-300 hover:text-gold-light"
-            style={{
-              color: "rgba(244, 240, 234, 0.4)",
-              border: "1px solid rgba(200, 169, 126, 0.15)",
-            }}
-          >
-            {inputMode === "push" ? "Push to Talk" : "Hands Free"}
-          </button>
+
+        <div className="flex-1 flex items-center justify-center gap-2 min-w-0">
+          <EngineSelector onModelChange={handleModelChange} onTTSChange={handleTTSChange} />
         </div>
-      </div>
 
-      <PersonaSelector onSelect={handlePersona} />
-      <ProviderSelectors onModelChange={handleModelChange} onTTSChange={handleTTSChange} />
-
-      <div className="flex flex-col items-center gap-3">
-        <VoiceOrb
-          state={state}
-          label={stateLabels[state]}
-          connected={connected}
-          inputMode={inputMode}
-          onPushStart={handlePushToTalk}
-          onPushEnd={handleRelease}
-        />
-
-        {(state === "speaking" || state === "processing") && (
-          <button
-            type="button"
-            onClick={() => { doInterrupt(); setAgentState("idle"); }}
-            className="px-5 py-1.5 rounded-full text-[11px] font-medium uppercase tracking-widest transition-all duration-300 hover:bg-gold/10"
+        <div className="flex items-center gap-3 shrink-0">
+          <select
+            value={activePersona}
+            onChange={(e) => handlePersona(e.target.value)}
+            className="rounded-lg px-2.5 py-1.5 text-[11px] tracking-wide outline-none cursor-pointer transition-all duration-300 focus:ring-1 focus:ring-gold/30"
             style={{
-              color: "rgba(244, 240, 234, 0.5)",
+              color: "rgba(226, 198, 157, 0.9)",
+              background: "rgba(10, 22, 36, 0.6)",
               border: "1px solid rgba(200, 169, 126, 0.2)",
             }}
           >
-            Interrupt
-          </button>
-        )}
+            {PERSONAS.map((p) => (
+              <option key={p.id} value={p.id}>{p.name}</option>
+            ))}
+          </select>
 
-        <MetricsOverlay metrics={metrics} />
+          <div className="flex items-center gap-1.5">
+            <div className={`h-1.5 w-1.5 rounded-full transition-colors duration-500 ${connected ? "bg-gold shadow-[0_0_6px_rgba(200,169,126,0.5)]" : "bg-red-400/60"}`} />
+            <span className="text-[10px] uppercase tracking-widest hidden sm:inline" style={{ color: "rgba(244, 240, 234, 0.4)" }}>
+              {connected ? "Online" : "Offline"}
+            </span>
+          </div>
+        </div>
+      </header>
+
+      <div className="flex flex-1 overflow-hidden">
+        <div
+          className={`w-80 xl:w-[340px] shrink-0 flex-col glass-panel m-3 mr-1.5 rounded-2xl overflow-hidden ${mobileTab === "conversation" ? "flex" : "hidden"} lg:flex`}
+        >
+          <div
+            className="px-4 py-3 flex items-center justify-between shrink-0"
+            style={{ borderBottom: "1px solid rgba(200, 169, 126, 0.06)" }}
+          >
+            <span className="micro-label">Conversation</span>
+            <span className="text-[10px] font-mono" style={{ color: "rgba(244, 240, 234, 0.2)" }}>
+              {entries.length || ""}
+            </span>
+          </div>
+          <div className="flex-1 overflow-y-auto p-3">
+            <TranscriptPanel entries={entries} partialTranscript={partial} stagingEntries={stagingEntries} />
+          </div>
+        </div>
+
+        <div
+          className={`flex-1 flex-col items-center justify-center gap-5 p-6 min-w-0 ${mobileTab === "voice" ? "flex" : "hidden"} lg:flex`}
+        >
+          <VoiceOrb
+            state={state}
+            label={stateLabels[state]}
+            connected={connected}
+            inputMode={inputMode}
+            onPushStart={handlePushToTalk}
+            onPushEnd={handleRelease}
+          />
+
+          <MetricsOverlay metrics={metrics} />
+
+          <div className="flex items-center gap-3">
+            <button
+              type="button"
+              onClick={handleModeSwitch}
+              className="text-[10px] uppercase tracking-widest px-3 py-1 rounded-full transition-all duration-300 hover:text-gold-light"
+              style={{
+                color: "rgba(244, 240, 234, 0.4)",
+                border: "1px solid rgba(200, 169, 126, 0.15)",
+              }}
+            >
+              {inputMode === "push" ? "Push to Talk" : "Hands Free"}
+            </button>
+
+            {(state === "speaking" || state === "processing") && (
+              <button
+                type="button"
+                onClick={() => { doInterrupt(); setAgentState("idle"); }}
+                className="px-3 py-1 rounded-full text-[10px] font-medium uppercase tracking-widest transition-all duration-300 hover:bg-gold/10"
+                style={{
+                  color: "rgba(244, 240, 234, 0.5)",
+                  border: "1px solid rgba(200, 169, 126, 0.2)",
+                }}
+              >
+                Interrupt
+              </button>
+            )}
+          </div>
+
+          <form onSubmit={handleTextSubmit} className="w-full max-w-md flex gap-2">
+            <input
+              type="text"
+              value={textInput}
+              onChange={(e) => setTextInput(e.target.value)}
+              placeholder="Type a message..."
+              maxLength={MAX_TEXT_INPUT}
+              disabled={!connected}
+              className="flex-1 rounded-xl px-4 py-2.5 text-sm text-ivory placeholder:text-ivory/30 outline-none transition-all duration-300 focus:ring-1 focus:ring-gold/30 disabled:opacity-30"
+              style={{
+                background: "rgba(10, 22, 36, 0.6)",
+                border: "1px solid rgba(200, 169, 126, 0.15)",
+              }}
+            />
+            <button
+              type="submit"
+              disabled={!connected || !textInput.trim()}
+              className="rounded-xl px-5 py-2.5 text-[11px] font-medium uppercase tracking-widest transition-all duration-300 hover:bg-gold/10 disabled:opacity-30 disabled:cursor-not-allowed"
+              style={{
+                color: "rgba(244, 240, 234, 0.7)",
+                border: "1px solid rgba(200, 169, 126, 0.2)",
+              }}
+            >
+              Send
+            </button>
+          </form>
+        </div>
+
+        <div
+          className={`w-80 xl:w-[340px] shrink-0 flex-col glass-panel m-3 ml-1.5 rounded-2xl overflow-hidden ${mobileTab === "intel" ? "flex" : "hidden"} lg:flex`}
+        >
+          <div className="flex shrink-0" style={{ borderBottom: "1px solid rgba(200, 169, 126, 0.06)" }}>
+            {(["crm", "analytics"] as const).map((tab) => (
+              <button
+                key={tab}
+                type="button"
+                onClick={() => setIntelTab(tab)}
+                className="flex-1 px-3 py-3 text-[10px] font-medium uppercase tracking-[0.15em] transition-all duration-300 relative"
+                style={{
+                  color: intelTab === tab ? "rgba(226, 198, 157, 0.9)" : "rgba(244, 240, 234, 0.3)",
+                  background: intelTab === tab ? "rgba(200, 169, 126, 0.06)" : "transparent",
+                }}
+              >
+                {tab === "crm" ? "CRM" : "Analytics"}
+                {intelTab === tab && (
+                  <div className="absolute bottom-0 left-1/4 right-1/4 h-px" style={{ background: "rgba(200, 169, 126, 0.4)" }} />
+                )}
+              </button>
+            ))}
+          </div>
+          <div className="flex-1 overflow-y-auto p-4">
+            {intelTab === "crm" ? <CRMPanel /> : <AnalyticsPanel sessionMetrics={sessionAnalytics} />}
+          </div>
+        </div>
       </div>
 
-      <form onSubmit={handleTextSubmit} className="w-full flex gap-2">
-        <input
-          type="text"
-          value={textInput}
-          onChange={(e) => setTextInput(e.target.value)}
-          placeholder="Type a message..."
-          maxLength={MAX_TEXT_INPUT}
-          disabled={!connected}
-          className="flex-1 rounded-xl px-4 py-2.5 text-sm text-ivory placeholder:text-ivory/30 outline-none transition-all duration-300 focus:ring-1 focus:ring-gold/30 disabled:opacity-30"
-          style={{
-            background: "rgba(10, 22, 36, 0.6)",
-            border: "1px solid rgba(200, 169, 126, 0.15)",
-          }}
-        />
-        <button
-          type="submit"
-          disabled={!connected || !textInput.trim()}
-          className="rounded-xl px-5 py-2.5 text-[11px] font-medium uppercase tracking-widest transition-all duration-300 hover:bg-gold/10 disabled:opacity-30 disabled:cursor-not-allowed"
-          style={{
-            color: "rgba(244, 240, 234, 0.7)",
-            border: "1px solid rgba(200, 169, 126, 0.2)",
-          }}
-        >
-          Send
-        </button>
-      </form>
-
-      <TabPanel tabs={tabs} defaultTab="transcript">
-        {{
-          transcript: <TranscriptPanel entries={entries} partialTranscript={partial} />,
-          staging: <StagingArea entries={stagingEntries} />,
-          crm: <CRMPanel />,
-          analytics: <AnalyticsPanel sessionMetrics={sessionAnalytics} />,
-        }}
-      </TabPanel>
+      <nav
+        className="lg:hidden glass-panel shrink-0 flex z-20 rounded-none"
+        style={{ borderBottom: "none", borderLeft: "none", borderRight: "none" }}
+      >
+        {mobileTabs.map((tab) => (
+          <button
+            key={tab.id}
+            type="button"
+            onClick={() => setMobileTab(tab.id)}
+            className="flex-1 flex flex-col items-center gap-1 py-3 transition-all duration-200"
+            style={{
+              color: mobileTab === tab.id ? "rgba(226, 198, 157, 0.9)" : "rgba(244, 240, 234, 0.3)",
+              background: mobileTab === tab.id ? "rgba(200, 169, 126, 0.04)" : "transparent",
+            }}
+          >
+            {tab.icon}
+            <span className="text-[9px] uppercase tracking-wider font-medium">
+              {tab.label}
+            </span>
+          </button>
+        ))}
+      </nav>
     </div>
   );
 }
-
-
