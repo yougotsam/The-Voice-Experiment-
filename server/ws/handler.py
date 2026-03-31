@@ -87,6 +87,7 @@ async def websocket_endpoint(ws: WebSocket) -> None:
     logger.info("WS connected: %s", session_id)
 
     orchestrator: Orchestrator | None = None
+    realtime_session = None
     ping_task: asyncio.Task | None = None
     try:
         session = ConversationSession(session_id)
@@ -153,7 +154,10 @@ async def websocket_endpoint(ws: WebSocket) -> None:
             data = await ws.receive()
 
             if "bytes" in data and data["bytes"]:
-                await orchestrator.feed_audio(data["bytes"])
+                if realtime_session:
+                    await realtime_session.send_audio(data["bytes"])
+                else:
+                    await orchestrator.feed_audio(data["bytes"])
             elif "text" in data and data["text"]:
                 try:
                     msg = decode_message(data["text"])
@@ -165,20 +169,30 @@ async def websocket_endpoint(ws: WebSocket) -> None:
                 if msg_type == ClientMessageType.PONG:
                     continue
                 elif msg_type == ClientMessageType.START:
-                    try:
-                        await orchestrator.start_listening()
-                    except Exception:
-                        logger.exception("Failed to start listening")
-                        await send_json("error", {"text": "Failed to connect to speech recognition service."})
-                        await send_status("idle")
+                    if realtime_session:
+                        await send_status("listening")
+                    else:
+                        try:
+                            await orchestrator.start_listening()
+                        except Exception:
+                            logger.exception("Failed to start listening")
+                            await send_json("error", {"text": "Failed to connect to speech recognition service."})
+                            await send_status("idle")
                 elif msg_type == ClientMessageType.STOP:
-                    await orchestrator.stop_listening()
+                    if realtime_session:
+                        await send_status("idle")
+                    else:
+                        await orchestrator.stop_listening()
                 elif msg_type == ClientMessageType.INTERRUPT:
-                    await orchestrator.interrupt()
+                    if not realtime_session:
+                        await orchestrator.interrupt()
                 elif msg_type == ClientMessageType.TEXT:
                     text = msg.get("text", "").strip()[:MAX_TEXT_LENGTH]
                     if text:
-                        await orchestrator.process_text_input(text)
+                        if realtime_session:
+                            await realtime_session.send_text(text)
+                        else:
+                            await orchestrator.process_text_input(text)
                 elif msg_type == ClientMessageType.CONFIG:
                     persona_id = msg.get("persona_id")
                     model_id = msg.get("model_id")
@@ -214,9 +228,50 @@ async def websocket_endpoint(ws: WebSocket) -> None:
                                 await send_json("error", {"text": f"API key not configured for {model_cfg.provider}"})
 
                     if tts_provider_id:
-                        if tts_provider_id not in VALID_TTS_PROVIDERS:
+                        if tts_provider_id == "grok-realtime":
+                            if not settings.xai_api_key:
+                                await send_json("error", {"text": "xAI API key not configured for Grok Realtime"})
+                            else:
+                                try:
+                                    if realtime_session:
+                                        await realtime_session.close()
+                                    await orchestrator.stop_listening()
+                                    from server.realtime.xai import XaiRealtimeSession
+                                    voice = msg.get("voice_id") or settings.xai_tts_voice or "Eve"
+                                    rt_voice = voice.capitalize() if voice.capitalize() in {"Eve", "Ara", "Rex", "Sal", "Leo"} else "Eve"
+                                    realtime_session = XaiRealtimeSession(
+                                        api_key=settings.xai_api_key,
+                                        voice=rt_voice,
+                                        instructions=session.system_prompt,
+                                        sample_rate=24000,
+                                    )
+
+                                    async def _rt_on_audio(pcm: bytes) -> None:
+                                        await send_json("agent.audio.start", {"sample_rate": 24000})
+                                        await send_audio(pcm)
+
+                                    async def _rt_on_text(text: str) -> None:
+                                        await send_json("agent.text", {"text": text})
+
+                                    await realtime_session.connect(
+                                        on_audio=_rt_on_audio,
+                                        on_transcript=None,
+                                        on_status=lambda s: send_status(s),
+                                        on_text=_rt_on_text,
+                                    )
+                                    await send_json(ServerMessageType.TTS_LOADED.value, {"provider": "grok-realtime"})
+                                    logger.info("Switched to Grok Realtime mode for session %s", session_id)
+                                except Exception:
+                                    logger.exception("Failed to switch to Grok Realtime")
+                                    realtime_session = None
+                                    await send_json("error", {"text": "Failed to start Grok Realtime session"})
+                        elif tts_provider_id not in VALID_TTS_PROVIDERS:
                             await send_json("error", {"text": f"Unknown TTS provider: {tts_provider_id}"})
                         else:
+                            if realtime_session:
+                                await realtime_session.close()
+                                realtime_session = None
+                                logger.info("Exited Grok Realtime mode for session %s", session_id)
                             try:
                                 primary = _create_single_tts(tts_provider_id)
                                 fallback_names = [n.strip() for n in settings.tts_fallback_chain.split(",") if n.strip()]
@@ -265,5 +320,7 @@ async def websocket_endpoint(ws: WebSocket) -> None:
         ws_manager.unregister(session_id)
         if ping_task:
             ping_task.cancel()
+        if realtime_session:
+            await realtime_session.close()
         if orchestrator:
             await orchestrator.shutdown()

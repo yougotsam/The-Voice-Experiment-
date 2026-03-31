@@ -8,6 +8,7 @@ router = APIRouter(prefix="/api/providers", tags=["providers"])
 TTS_PROVIDERS = [
     {"id": "groq", "name": "Groq (Orpheus)", "key_setting": "llm_api_key"},
     {"id": "xai", "name": "xAI", "key_setting": "xai_api_key"},
+    {"id": "grok-realtime", "name": "Grok Realtime (Speech-to-Speech)", "key_setting": "xai_api_key"},
     {"id": "elevenlabs", "name": "ElevenLabs", "key_setting": "elevenlabs_api_key"},
     {"id": "piper", "name": "Piper (Local)", "key_setting": None},
 ]
@@ -68,8 +69,10 @@ async def get_voices(provider_id: str):
     default = ""
     if provider_id == "groq":
         default = settings.groq_tts_voice
-    elif provider_id == "xai":
+    elif provider_id in ("xai", "grok-realtime"):
         default = settings.xai_tts_voice
+        if not voices:
+            voices = VOICE_OPTIONS.get("xai", [])
     elif provider_id == "elevenlabs":
         default = settings.elevenlabs_voice_id
         voices = [{"id": default, "name": "Default Voice"}]

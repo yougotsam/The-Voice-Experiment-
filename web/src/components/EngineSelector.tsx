@@ -49,6 +49,10 @@ function buildEngines(models: ProviderOption[], ttsProviders: ProviderOption[]):
     const tts = xaiTTS || groqTTS || ttsProviders[0];
     engines.push({ id: "grok-fast", label: "Grok Fast", description: `Grok 3 Mini + ${tts?.name || "TTS"}`, modelId: grokMini.id, ttsId: tts?.id });
   }
+  const grokRealtime = ttsProviders.find((p) => p.id === "grok-realtime");
+  if (grokRealtime) {
+    engines.push({ id: "grok-realtime", label: "Grok Realtime", description: "Speech-to-Speech (No STT/TTS chain)", ttsId: grokRealtime.id, integrated: true });
+  }
   const elevenlabs = ttsProviders.find((p) => p.id === "elevenlabs");
   if (groqModel && elevenlabs) {
     engines.push({ id: "studio", label: "Studio", description: "Llama 70B + ElevenLabs (HQ)", modelId: groqModel.id, ttsId: elevenlabs.id });
