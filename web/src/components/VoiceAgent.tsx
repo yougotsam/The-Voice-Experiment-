@@ -40,6 +40,7 @@ export function VoiceAgent() {
   const [crmRefreshKey, setCrmRefreshKey] = useState(0);
   const agentTextBuffer = useRef("");
   const lastSpeakingEnd = useRef(0);
+  const hasConnected = useRef(false);
   const cappedSetEntries = useCallback(
     (updater: (prev: TranscriptEntry[]) => TranscriptEntry[]) => {
       setEntries((prev) => {
@@ -229,7 +230,7 @@ export function VoiceAgent() {
     url: WS_URL,
     onMessage: handleMessage,
     onBinary: handleBinary,
-    onOpen: () => setConnected(true),
+    onOpen: () => { hasConnected.current = true; setConnected(true); },
     onClose: () => {
       setConnected(false);
       stopPlayback();
@@ -471,8 +472,16 @@ export function VoiceAgent() {
         </div>
 
         <div
-          className={`flex-1 flex-col items-center justify-center gap-5 p-6 min-w-0 ${mobileTab === "voice" ? "flex" : "hidden"} lg:flex`}
+          className={`flex-1 flex-col items-center justify-center gap-5 p-6 min-w-0 relative ${mobileTab === "voice" ? "flex" : "hidden"} lg:flex`}
         >
+          {!connected && hasConnected.current && (
+            <div className="absolute inset-0 flex items-center justify-center bg-[rgba(10,22,36,0.8)] z-30 rounded-2xl">
+              <div className="text-center" role="status" aria-live="polite" aria-atomic="true">
+                <p className="text-sm" style={{ color: "rgba(244, 240, 234, 0.7)" }}>Connection lost</p>
+                <p className="text-xs mt-1" style={{ color: "rgba(244, 240, 234, 0.3)" }}>Reconnecting...</p>
+              </div>
+            </div>
+          )}
           <VoiceOrb
             state={state}
             label={stateLabels[state]}
