@@ -116,5 +116,5 @@ async def get_voices(provider_id: str):
     elif provider_id == "cartesia":
         default = settings.cartesia_voice_id
     elif provider_id == "piper":
-        default = "en_US-lessac-medium"
+        default = settings.piper_voice_id
     return {"voices": voices, "default": default}

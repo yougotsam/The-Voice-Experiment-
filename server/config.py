@@ -11,6 +11,7 @@ class Settings(BaseSettings):
     groq_tts_voice: str = "autumn"
     groq_tts_model: str = "canopylabs/orpheus-v1-english"
     xai_tts_voice: str = "eve"
+    piper_voice_id: str = "en_US-lessac-medium"
     tts_provider: str = "fallback"
     tts_fallback_chain: str = "groq,xai,elevenlabs,deepgram,cartesia"
     deepgram_api_key: str = ""
