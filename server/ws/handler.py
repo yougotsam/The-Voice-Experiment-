@@ -142,7 +142,7 @@ async def websocket_endpoint(ws: WebSocket) -> None:
                 (n for n in chain if tts_key_map.get(n) is None or getattr(settings, tts_key_map.get(n, ""), "")),
                 chain[0] if chain else "groq",
             )
-        await send_json("config.current", {"model_id": default_model_id, "tts_provider": default_tts})
+        await send_json(ServerMessageType.CONFIG_CURRENT.value, {"model_id": default_model_id, "tts_provider": default_tts})
 
         while True:
             data = await ws.receive()
