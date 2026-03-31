@@ -1,6 +1,7 @@
 import logging
 import re
 import ssl
+from functools import wraps
 from typing import Any
 
 import certifi
@@ -10,6 +11,34 @@ from server.tools.base import Tool
 from server.config import settings
 
 logger = logging.getLogger(__name__)
+
+
+def _safe_ghl(func):
+    @wraps(func)
+    async def wrapper(self, **kwargs):
+        try:
+            return await func(self, **kwargs)
+        except httpx.HTTPStatusError as exc:
+            code = exc.response.status_code
+            body = exc.response.text[:200]
+            logger.error("GHL %s HTTP %s: %s", self.name, code, body)
+            if code == 401:
+                return {"error": "GHL authentication failed. Check your GHL_API_KEY."}
+            if code == 422:
+                return {"error": f"GHL rejected the request: {body}"}
+            if code == 429:
+                return {"error": "GHL rate limit reached. Try again in a moment."}
+            return {"error": f"GHL error (HTTP {code}): {body}"}
+        except (httpx.ConnectError, httpx.ConnectTimeout):
+            logger.error("GHL %s: connection failed", self.name)
+            return {"error": "Could not reach GoHighLevel. Check your internet connection."}
+        except httpx.ReadTimeout:
+            logger.error("GHL %s: read timeout", self.name)
+            return {"error": "GoHighLevel took too long to respond. Try again."}
+        except Exception as exc:
+            logger.exception("GHL %s unexpected error", self.name)
+            return {"error": f"GHL error: {type(exc).__name__}"}
+    return wrapper
 
 GHL_BASE = "https://services.leadconnectorhq.com"
 
@@ -59,6 +88,7 @@ class GHLContactSearch(Tool):
         "required": ["query"],
     }
 
+    @_safe_ghl
     async def execute(self, **kwargs) -> dict[str, Any]:
         query = kwargs.get("query")
         if not query:
@@ -89,9 +119,12 @@ class GHLContactSearch(Tool):
 class GHLDraftContent(Tool):
     name = "draft_content"
     description = (
-        "Draft creative content such as blog posts, social captions, email copy, "
-        "or ad scripts. Returns the generated text for review. This does NOT "
-        "publish anything -- it only produces a draft."
+        "Draft expert-level brand content: blog posts, social captions, email sequences, "
+        "ad copy, video scripts, landing page copy, or brand messaging. "
+        "You are a world-class brand strategist and copywriter. Apply proven frameworks: "
+        "AIDA (Attention-Interest-Desire-Action), PAS (Problem-Agitate-Solve), or "
+        "StoryBrand as appropriate. Write copy that converts. "
+        "This does NOT publish anything -- it only produces a draft for review."
     )
     parameters = {
         "type": "object",
@@ -121,13 +154,22 @@ class GHLDraftContent(Tool):
         topic = kwargs.get("topic", "")
         tone = kwargs.get("tone", "professional")
         length = kwargs.get("length", "medium")
+        length_guide = {"short": "50-100 words", "medium": "150-300 words", "long": "400-800 words"}
         return {
             "draft_type": content_type,
             "topic": topic,
             "tone": tone,
             "length": length,
+            "length_guide": length_guide.get(length, "150-300 words"),
             "status": "ready_for_generation",
-            "note": "Draft parameters captured. The LLM will generate the content inline.",
+            "instructions": (
+                f"Generate a {tone} {content_type} about '{topic}'. "
+                f"Target length: {length_guide.get(length, '150-300 words')}. "
+                "Apply brand copywriting best practices: strong hook, clear value proposition, "
+                "compelling CTA. Use the appropriate framework (AIDA for ads/emails, "
+                "PAS for problem-focused content, StoryBrand for brand narratives). "
+                "Write like a top-tier brand strategist — punchy, specific, conversion-focused."
+            ),
         }
 
 
@@ -152,6 +194,7 @@ class GHLGetCalendarEvents(Tool):
         "required": [],
     }
 
+    @_safe_ghl
     async def execute(self, **kwargs) -> dict[str, Any]:
         from datetime import datetime, timedelta, timezone
 
@@ -225,6 +268,7 @@ class GHLMoveOpportunity(Tool):
         "required": ["opportunity_id"],
     }
 
+    @_safe_ghl
     async def execute(self, **kwargs) -> dict[str, Any]:
         opp_id = kwargs.get("opportunity_id")
         if not opp_id:
@@ -292,6 +336,7 @@ class GHLCreateContact(Tool):
         "required": ["first_name"],
     }
 
+    @_safe_ghl
     async def execute(self, **kwargs) -> dict[str, Any]:
         first_name = kwargs.get("first_name", "").strip()
         if not first_name:
@@ -357,6 +402,7 @@ class GHLSendSMS(Tool):
         "required": ["contact_id", "message"],
     }
 
+    @_safe_ghl
     async def execute(self, **kwargs) -> dict[str, Any]:
         contact_id = kwargs.get("contact_id", "").strip()
         message = kwargs.get("message", "").strip()
@@ -414,6 +460,7 @@ class GHLSendEmail(Tool):
         "required": ["contact_id", "subject", "body"],
     }
 
+    @_safe_ghl
     async def execute(self, **kwargs) -> dict[str, Any]:
         contact_id = kwargs.get("contact_id", "").strip()
         subject = kwargs.get("subject", "").strip()
@@ -465,6 +512,7 @@ class GHLGetPipelines(Tool):
         "required": [],
     }
 
+    @_safe_ghl
     async def execute(self, **kwargs) -> dict[str, Any]:
         client = _get_client()
         resp = await client.get(
@@ -530,6 +578,7 @@ class GHLCreateOpportunity(Tool):
         "required": ["name", "pipeline_id", "stage_id"],
     }
 
+    @_safe_ghl
     async def execute(self, **kwargs) -> dict[str, Any]:
         name = kwargs.get("name", "").strip()
         pipeline_id = kwargs.get("pipeline_id", "").strip()
@@ -587,6 +636,7 @@ class GHLGetConversations(Tool):
         "required": [],
     }
 
+    @_safe_ghl
     async def execute(self, **kwargs) -> dict[str, Any]:
         try:
             limit = max(1, min(int(kwargs.get("limit", 10)), 20))

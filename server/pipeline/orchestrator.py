@@ -13,8 +13,12 @@ from server.pipeline.metrics import SessionMetrics
 from server.tools.base import ToolRegistry
 from server.agents.router import AgentRouter
 from server.agents.registry import get_agent
+from server.llm.models import MODEL_REGISTRY
+from server.config import settings
 
 logger = logging.getLogger(__name__)
+
+LLM_FALLBACK_ORDER = ["groq-llama-70b", "gemini-flash", "xai-grok-3", "groq-llama-8b", "xai-grok-mini"]
 
 SENTENCE_END = re.compile(r"(?<=[.!?])\s+")
 MAX_TOOL_ROUNDS = 3
@@ -67,6 +71,22 @@ class Orchestrator:
         self._processing_lock = asyncio.Lock()
         self._response_task: asyncio.Task | None = None
 
+    def _try_llm_fallback(self) -> bool:
+        from server.llm.openai_compat import _make_openai_client
+        for model_id in LLM_FALLBACK_ORDER:
+            cfg = MODEL_REGISTRY.get(model_id)
+            if not cfg:
+                continue
+            api_key = getattr(settings, cfg.api_key_setting, "")
+            if not api_key:
+                continue
+            if cfg.model == self._llm._model:
+                continue
+            logger.info("LLM fallback: switching to %s", cfg.name)
+            self._llm.set_model(cfg.model, cfg.base_url, api_key)
+            return True
+        return False
+
     async def start_listening(self) -> None:
         await self._stt.stop()
         self._session.is_active = True
@@ -115,9 +135,20 @@ class Orchestrator:
             await self._process_response(text)
         except asyncio.CancelledError:
             logger.info("Response cancelled (interrupted)")
-        except Exception:
+        except Exception as exc:
+            exc_name = type(exc).__name__
+            is_rate_limit = "RateLimit" in exc_name or "429" in str(exc)
+            if is_rate_limit and self._try_llm_fallback():
+                logger.info("Retrying with fallback LLM after rate limit")
+                await self._send_json("status", {"text": "Switching to backup model..."})
+                try:
+                    await self._process_response(text)
+                    return
+                except Exception:
+                    logger.exception("Fallback LLM also failed")
             logger.exception("Response pipeline failed")
-            await self._send_json("error", {"text": "An error occurred while generating a response."})
+            detail = str(exc)[:200] if str(exc) else exc_name
+            await self._send_json("error", {"text": f"Response failed: {detail}"})
             await self._send_status("idle")
 
     async def process_text_input(self, text: str) -> None:
