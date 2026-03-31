@@ -80,7 +80,7 @@ class Orchestrator:
             api_key = getattr(settings, cfg.api_key_setting, "")
             if not api_key:
                 continue
-            if cfg.model == self._llm._model:
+            if cfg.model == self._llm.model:
                 continue
             logger.info("LLM fallback: switching to %s", cfg.name)
             self._llm.set_model(cfg.model, cfg.base_url, api_key)

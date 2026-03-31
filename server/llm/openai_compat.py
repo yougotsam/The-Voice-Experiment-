@@ -25,6 +25,10 @@ class OpenAICompatLLM(LLMProvider):
         self._client = _make_openai_client(api_key, base_url)
         self._model = model
 
+    @property
+    def model(self) -> str:
+        return self._model
+
     def set_model(self, model: str, base_url: str, api_key: str) -> None:
         self._model = model
         self._client = _make_openai_client(api_key, base_url)
