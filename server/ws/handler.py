@@ -321,7 +321,7 @@ async def websocket_endpoint(ws: WebSocket) -> None:
                                 await send_json("error", {"text": f"Failed to load TTS provider: {tts_provider_id}"})
 
                     voice_id = msg.get("voice_id")
-                    if voice_id and isinstance(voice_id, str):
+                    if voice_id and isinstance(voice_id, str) and not realtime_session:
                         if hasattr(tts, 'set_voice'):
                             result = tts.set_voice(voice_id)
                             if result is False:
