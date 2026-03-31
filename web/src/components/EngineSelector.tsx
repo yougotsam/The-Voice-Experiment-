@@ -70,9 +70,14 @@ export function EngineSelector({ onModelChange, onTTSChange }: EngineSelectorPro
       setActiveTTS(ttsData.default || t[0]?.id || "");
       const built = buildEngines(m, t);
       setEngines(built);
-      if (built.length > 0) setActiveEngine(built[0].id);
+      if (built.length > 0) {
+        const first = built[0];
+        setActiveEngine(first.id);
+        if (first.modelId) onModelChange(first.modelId);
+        if (first.ttsId) onTTSChange(first.ttsId);
+      }
     });
-  }, []);
+  }, [onModelChange, onTTSChange]);
 
   const handleEngineChange = useCallback(
     (engineId: string) => {

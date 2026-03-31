@@ -32,8 +32,13 @@ export function TranscriptPanel({
     bottomRef.current?.scrollIntoView({ behavior: "smooth" });
   }, [entries, partialTranscript, stagingEntries]);
 
-  const handleCopy = useCallback((text: string) => {
-    navigator.clipboard.writeText(text);
+  const handleCopy = useCallback(async (text: string) => {
+    if (!navigator?.clipboard?.writeText) return;
+    try {
+      await navigator.clipboard.writeText(text);
+    } catch {
+      // silently fail
+    }
   }, []);
 
   const feed: FeedItem[] = [
