@@ -74,7 +74,7 @@ export function CRMPanel({ refreshKey = 0 }: CRMPanelProps) {
     } catch (e) {
       const status = (e as Error).message;
       if (status === "503") {
-        setError("GHL credentials not configured");
+        setError("CRM features require GoHighLevel credentials. Add GHL_API_KEY and GHL_LOCATION_ID to your .env file.");
       } else {
         setError("Failed to load data");
       }

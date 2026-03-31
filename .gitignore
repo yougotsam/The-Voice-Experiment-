@@ -49,6 +49,7 @@ context_audio.wav
 node_modules/
 .next/
 next-env.d.ts
+*.tsbuildinfo
 
 # VAD/ONNX model files (copied by postinstall)
 web/public/*.onnx

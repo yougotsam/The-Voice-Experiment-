@@ -324,6 +324,13 @@ export function VoiceAgent() {
     [sendJSON],
   );
 
+  const handleVoiceChange = useCallback(
+    (voiceId: string) => {
+      sendJSON({ type: "config", voice_id: voiceId });
+    },
+    [sendJSON],
+  );
+
   const handleTextSubmit = useCallback((e: React.FormEvent) => {
     e.preventDefault();
     const text = textInput.trim().slice(0, MAX_TEXT_INPUT);
@@ -429,7 +436,7 @@ export function VoiceAgent() {
         </h1>
 
         <div className="flex-1 flex items-center justify-center gap-2 min-w-0">
-          <EngineSelector onModelChange={handleModelChange} onTTSChange={handleTTSChange} serverConfig={serverConfig} />
+          <EngineSelector onModelChange={handleModelChange} onTTSChange={handleTTSChange} onVoiceChange={handleVoiceChange} serverConfig={serverConfig} />
         </div>
 
         <div className="flex items-center gap-3 shrink-0">
