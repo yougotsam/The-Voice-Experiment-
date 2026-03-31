@@ -31,6 +31,8 @@ class XaiRealtimeSession:
         self._ws: ClientConnection | None = None
         self._receive_task: asyncio.Task | None = None
         self._on_audio: Callable[[bytes], Awaitable[None]] | None = None
+        self._on_audio_start: Callable[[], Awaitable[None]] | None = None
+        self._on_audio_end: Callable[[], Awaitable[None]] | None = None
         self._on_transcript: Callable[[str], Awaitable[None]] | None = None
         self._on_status: Callable[[str], Awaitable[None]] | None = None
         self._on_text: Callable[[str], Awaitable[None]] | None = None
@@ -39,11 +41,15 @@ class XaiRealtimeSession:
     async def connect(
         self,
         on_audio: Callable[[bytes], Awaitable[None]],
+        on_audio_start: Callable[[], Awaitable[None]] | None = None,
+        on_audio_end: Callable[[], Awaitable[None]] | None = None,
         on_transcript: Callable[[str], Awaitable[None]] | None = None,
         on_status: Callable[[str], Awaitable[None]] | None = None,
         on_text: Callable[[str], Awaitable[None]] | None = None,
     ) -> None:
         self._on_audio = on_audio
+        self._on_audio_start = on_audio_start
+        self._on_audio_end = on_audio_end
         self._on_transcript = on_transcript
         self._on_status = on_status
         self._on_text = on_text
@@ -121,13 +127,18 @@ class XaiRealtimeSession:
                     if audio_b64:
                         if not audio_started:
                             audio_started = True
+                            if self._on_audio_start:
+                                await self._on_audio_start()
                             if self._on_status:
                                 await self._on_status("speaking")
                         pcm = base64.b64decode(audio_b64)
                         await self._on_audio(pcm)
 
                 elif event_type == "response.output_audio.done":
-                    audio_started = False
+                    if audio_started:
+                        audio_started = False
+                        if self._on_audio_end:
+                            await self._on_audio_end()
 
                 elif event_type == "response.output_audio_transcript.delta":
                     text = data.get("delta", "")

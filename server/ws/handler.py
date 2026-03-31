@@ -246,18 +246,13 @@ async def websocket_endpoint(ws: WebSocket) -> None:
                                         sample_rate=24000,
                                     )
 
-                                    async def _rt_on_audio(pcm: bytes) -> None:
-                                        await send_json("agent.audio.start", {"sample_rate": 24000})
-                                        await send_audio(pcm)
-
-                                    async def _rt_on_text(text: str) -> None:
-                                        await send_json("agent.text", {"text": text})
-
                                     await realtime_session.connect(
-                                        on_audio=_rt_on_audio,
+                                        on_audio=send_audio,
+                                        on_audio_start=lambda: send_json("agent.audio.start", {"sample_rate": 24000}),
+                                        on_audio_end=lambda: send_json("agent.audio.end", {}),
                                         on_transcript=None,
                                         on_status=lambda s: send_status(s),
-                                        on_text=_rt_on_text,
+                                        on_text=lambda t: send_json("agent.text", {"text": t}),
                                     )
                                     await send_json(ServerMessageType.TTS_LOADED.value, {"provider": "grok-realtime"})
                                     logger.info("Switched to Grok Realtime mode for session %s", session_id)
