@@ -25,11 +25,11 @@ function buildEngines(models: ProviderOption[], ttsProviders: ProviderOption[]):
   const groqModel = models.find((m) => m.id.startsWith("groq-llama-70b"));
   const groqTTS = ttsProviders.find((p) => p.id === "groq");
   if (groqModel && groqTTS) {
-    engines.push({ id: "groq-pipeline", label: "Groq Pipeline", description: "Llama 3.3 70B + PlayAI TTS", modelId: groqModel.id, ttsId: groqTTS.id });
+    engines.push({ id: "groq-pipeline", label: "Groq Pipeline", description: "Llama 3.3 70B + Orpheus TTS", modelId: groqModel.id, ttsId: groqTTS.id });
   }
   const groq8b = models.find((m) => m.id.startsWith("groq-llama-8b"));
   if (groq8b && groqTTS) {
-    engines.push({ id: "groq-fast", label: "Groq Fast", description: "Llama 3.1 8B + PlayAI TTS", modelId: groq8b.id, ttsId: groqTTS.id });
+    engines.push({ id: "groq-fast", label: "Groq Fast", description: "Llama 3.1 8B + Orpheus TTS", modelId: groq8b.id, ttsId: groqTTS.id });
   }
   const gemini = models.find((m) => m.id.startsWith("gemini"));
   if (gemini) {
