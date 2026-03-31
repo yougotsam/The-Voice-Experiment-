@@ -29,6 +29,8 @@ class GroqTTS(TTSProvider):
     async def synthesize(self, text: str, voice_id: str = "") -> AsyncIterator[bytes]:
         if voice_id:
             logger.debug("Groq TTS does not support per-request voice_id, using default '%s'", self._voice)
+        if not text or not text.strip():
+            return
         for chunk in self._split_text(text):
             payload = {
                 "model": self._model,
