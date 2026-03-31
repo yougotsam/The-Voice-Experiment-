@@ -74,9 +74,8 @@ export function useAudioPlayback() {
     clearTimeout(jitterTimeout.current);
     bufferQueue.current = [];
     nextStartTime.current = 0;
-    if (contextRef.current) {
-      contextRef.current.close();
-      contextRef.current = null;
+    if (contextRef.current && contextRef.current.state !== "closed") {
+      contextRef.current.suspend().catch(() => {});
     }
   }, []);
 
