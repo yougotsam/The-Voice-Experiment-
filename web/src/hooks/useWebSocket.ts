@@ -19,6 +19,10 @@ export type ServerMessage = {
   model_id?: string;
   provider?: string;
   agent_id?: string;
+  event_type?: string;
+  category?: string;
+  contact_name?: string;
+  details?: Record<string, unknown>;
 };
 
 type UseWebSocketOptions = {

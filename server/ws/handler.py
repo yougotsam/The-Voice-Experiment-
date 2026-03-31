@@ -21,6 +21,7 @@ from server.pipeline.session import ConversationSession
 from server.pipeline.metrics import SessionMetrics
 from server.agents.router import AgentRouter
 from server.tools.base import ToolRegistry
+from server.ws.connections import manager as ws_manager
 from server.tools.ghl import (
     GHLContactSearch,
     GHLCreateContact,
@@ -125,6 +126,7 @@ async def websocket_endpoint(ws: WebSocket) -> None:
             except (WebSocketDisconnect, Exception):
                 return
 
+        ws_manager.register(session_id, send_json)
         ping_task = asyncio.create_task(_ping_loop())
 
         while True:
@@ -213,6 +215,7 @@ async def websocket_endpoint(ws: WebSocket) -> None:
     except Exception:
         logger.exception("WS error: %s", session_id)
     finally:
+        ws_manager.unregister(session_id)
         if ping_task:
             ping_task.cancel()
         if orchestrator:
