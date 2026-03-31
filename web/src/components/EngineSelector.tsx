@@ -16,6 +16,7 @@ type Engine = {
 type EngineSelectorProps = {
   onModelChange: (modelId: string) => void;
   onTTSChange: (providerId: string) => void;
+  onVoiceChange?: (voiceId: string) => void;
   serverConfig?: { model_id: string; tts_provider: string } | null;
 };
 
@@ -54,7 +55,7 @@ function buildEngines(models: ProviderOption[], ttsProviders: ProviderOption[]):
   return engines;
 }
 
-export function EngineSelector({ onModelChange, onTTSChange, serverConfig }: EngineSelectorProps) {
+export function EngineSelector({ onModelChange, onTTSChange, onVoiceChange, serverConfig }: EngineSelectorProps) {
   const [engines, setEngines] = useState<Engine[]>([]);
   const [activeEngine, setActiveEngine] = useState("");
   const [showAdvanced, setShowAdvanced] = useState(false);
@@ -63,6 +64,8 @@ export function EngineSelector({ onModelChange, onTTSChange, serverConfig }: Eng
   const [activeModel, setActiveModel] = useState("");
   const [activeTTS, setActiveTTS] = useState("");
   const [synced, setSynced] = useState(false);
+  const [voices, setVoices] = useState<ProviderOption[]>([]);
+  const [activeVoice, setActiveVoice] = useState("");
 
   useEffect(() => {
     Promise.all([
@@ -102,6 +105,23 @@ export function EngineSelector({ onModelChange, onTTSChange, serverConfig }: Eng
     }
   }, [engines, activeEngine, synced]);
 
+  useEffect(() => {
+    if (!activeTTS) return;
+    let cancelled = false;
+    fetch(`${API_BASE}/api/providers/voices/${activeTTS}`)
+      .then((r) => r.json())
+      .then((data) => {
+        if (cancelled) return;
+        const v = data.voices || [];
+        const defaultVoice = data.default || v[0]?.id || "";
+        setVoices(v);
+        setActiveVoice(defaultVoice);
+        if (synced && defaultVoice) onVoiceChange?.(defaultVoice);
+      })
+      .catch(() => { if (!cancelled) { setVoices([]); setActiveVoice(""); } });
+    return () => { cancelled = true; };
+  }, [activeTTS, synced, onVoiceChange]);
+
   const handleEngineChange = useCallback(
     (engineId: string) => {
       setActiveEngine(engineId);
@@ -135,6 +155,14 @@ export function EngineSelector({ onModelChange, onTTSChange, serverConfig }: Eng
       onTTSChange(ttsId);
     },
     [onTTSChange],
+  );
+
+  const handleVoiceChange = useCallback(
+    (voiceId: string) => {
+      setActiveVoice(voiceId);
+      onVoiceChange?.(voiceId);
+    },
+    [onVoiceChange],
   );
 
   if (engines.length === 0) return null;
@@ -190,6 +218,14 @@ export function EngineSelector({ onModelChange, onTTSChange, serverConfig }: Eng
           >
             {ttsProviders.map((p) => <option key={p.id} value={p.id}>{p.name}</option>)}
           </select>
+          {voices.length > 1 && (
+            <select value={activeVoice} onChange={(e) => handleVoiceChange(e.target.value)}
+              className="rounded-lg px-2 py-1 text-[10px] outline-none cursor-pointer"
+              style={{ color: "rgba(244, 240, 234, 0.5)", background: "rgba(10, 22, 36, 0.6)", border: "1px solid rgba(200, 169, 126, 0.1)" }}
+            >
+              {voices.map((v) => <option key={v.id} value={v.id}>{v.name}</option>)}
+            </select>
+          )}
         </div>
       )}
     </div>
