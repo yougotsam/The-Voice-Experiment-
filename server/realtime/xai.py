@@ -16,6 +16,19 @@ XAI_REALTIME_URL = "wss://api.x.ai/v1/realtime"
 REALTIME_VOICES = {"Eve", "Ara", "Rex", "Sal", "Leo"}
 
 
+def _convert_tool_schemas(openai_schemas: list[dict]) -> list[dict]:
+    rt_tools = []
+    for schema in openai_schemas:
+        fn = schema.get("function", {})
+        rt_tools.append({
+            "type": "function",
+            "name": fn.get("name", ""),
+            "description": fn.get("description", ""),
+            "parameters": fn.get("parameters", {}),
+        })
+    return rt_tools
+
+
 class XaiRealtimeSession:
     def __init__(
         self,
@@ -23,11 +36,15 @@ class XaiRealtimeSession:
         voice: str = "Eve",
         instructions: str = "You are a helpful voice assistant.",
         sample_rate: int = 24000,
+        tools: list[dict] | None = None,
+        tool_executor: Callable[[str, dict], Awaitable[dict]] | None = None,
     ):
         self._api_key = api_key
         self._voice = voice if voice in REALTIME_VOICES else "Eve"
         self._instructions = instructions
         self._sample_rate = sample_rate
+        self._tools = _convert_tool_schemas(tools) if tools else []
+        self._tool_executor = tool_executor
         self._ws: ClientConnection | None = None
         self._receive_task: asyncio.Task | None = None
         self._on_audio: Callable[[bytes], Awaitable[None]] | None = None
@@ -36,7 +53,10 @@ class XaiRealtimeSession:
         self._on_transcript: Callable[[str], Awaitable[None]] | None = None
         self._on_status: Callable[[str], Awaitable[None]] | None = None
         self._on_text: Callable[[str], Awaitable[None]] | None = None
+        self._on_tool_start: Callable[[str, dict], Awaitable[None]] | None = None
+        self._on_tool_result: Callable[[str, dict], Awaitable[None]] | None = None
         self._connected = False
+        self._pending_tool_calls: list[dict] = []
 
     async def connect(
         self,
@@ -46,6 +66,8 @@ class XaiRealtimeSession:
         on_transcript: Callable[[str], Awaitable[None]] | None = None,
         on_status: Callable[[str], Awaitable[None]] | None = None,
         on_text: Callable[[str], Awaitable[None]] | None = None,
+        on_tool_start: Callable[[str, dict], Awaitable[None]] | None = None,
+        on_tool_result: Callable[[str, dict], Awaitable[None]] | None = None,
     ) -> None:
         self._on_audio = on_audio
         self._on_audio_start = on_audio_start
@@ -53,6 +75,8 @@ class XaiRealtimeSession:
         self._on_transcript = on_transcript
         self._on_status = on_status
         self._on_text = on_text
+        self._on_tool_start = on_tool_start
+        self._on_tool_result = on_tool_result
 
         ssl_ctx = ssl.create_default_context(cafile=certifi.where())
         self._ws = await websockets.connect(
@@ -61,57 +85,95 @@ class XaiRealtimeSession:
             additional_headers={"Authorization": f"Bearer {self._api_key}"},
         )
         self._connected = True
-        logger.info("xAI Realtime connected: voice=%s rate=%d", self._voice, self._sample_rate)
+        logger.info("xAI Realtime connected: voice=%s rate=%d tools=%d", self._voice, self._sample_rate, len(self._tools))
 
-        session_config = {
-            "type": "session.update",
-            "session": {
-                "voice": self._voice,
-                "instructions": self._instructions,
-                "turn_detection": {
-                    "type": "server_vad",
-                    "threshold": 0.6,
-                    "silence_duration_ms": 800,
-                    "prefix_padding_ms": 333,
-                },
-                "audio": {
-                    "input": {"format": {"type": "audio/pcm", "rate": self._sample_rate}},
-                    "output": {"format": {"type": "audio/pcm", "rate": self._sample_rate}},
-                },
+        session_cfg: dict[str, Any] = {
+            "voice": self._voice,
+            "instructions": self._instructions,
+            "turn_detection": {
+                "type": "server_vad",
+                "threshold": 0.6,
+                "silence_duration_ms": 800,
+                "prefix_padding_ms": 333,
+            },
+            "audio": {
+                "input": {"format": {"type": "audio/pcm", "rate": self._sample_rate}},
+                "output": {"format": {"type": "audio/pcm", "rate": self._sample_rate}},
             },
         }
-        await self._ws.send(json.dumps(session_config))
+        if self._tools:
+            session_cfg["tools"] = self._tools
+        await self._ws.send(json.dumps({"type": "session.update", "session": session_cfg}))
         self._receive_task = asyncio.create_task(self._receive_loop())
 
     async def send_audio(self, audio_bytes: bytes) -> None:
         if not self._ws or not self._connected:
             return
         encoded = base64.b64encode(audio_bytes).decode("utf-8")
-        event = {
-            "type": "input_audio_buffer.append",
-            "audio": encoded,
-        }
         try:
-            await self._ws.send(json.dumps(event))
+            await self._ws.send(json.dumps({
+                "type": "input_audio_buffer.append",
+                "audio": encoded,
+            }))
         except Exception:
             logger.warning("Failed to send audio to xAI Realtime", exc_info=True)
 
     async def send_text(self, text: str) -> None:
         if not self._ws or not self._connected:
             return
-        event = {
+        await self._ws.send(json.dumps({
             "type": "conversation.item.create",
             "item": {
                 "type": "message",
                 "role": "user",
                 "content": [{"type": "input_text", "text": text}],
             },
-        }
-        await self._ws.send(json.dumps(event))
+        }))
         await self._ws.send(json.dumps({
             "type": "response.create",
             "response": {"modalities": ["text", "audio"]},
         }))
+
+    async def _handle_tool_calls(self) -> None:
+        if not self._pending_tool_calls or not self._ws:
+            return
+        calls = self._pending_tool_calls
+        self._pending_tool_calls = []
+
+        for tc in calls:
+            name = tc["name"]
+            call_id = tc["call_id"]
+            try:
+                args = json.loads(tc.get("arguments", "{}"))
+            except json.JSONDecodeError:
+                args = {}
+
+            if self._on_tool_start:
+                await self._on_tool_start(name, args)
+
+            if self._tool_executor:
+                try:
+                    result = await self._tool_executor(name, args)
+                except Exception:
+                    logger.exception("Tool '%s' execution failed in realtime", name)
+                    result = {"error": f"Tool '{name}' encountered an internal error."}
+            else:
+                result = {"error": f"No tool executor configured for '{name}'"}
+
+            if self._on_tool_result:
+                await self._on_tool_result(name, result)
+
+            await self._ws.send(json.dumps({
+                "type": "conversation.item.create",
+                "item": {
+                    "type": "function_call_output",
+                    "call_id": call_id,
+                    "output": json.dumps(result),
+                },
+            }))
+            logger.info("Tool '%s' result sent to xAI Realtime (call_id=%s)", name, call_id)
+
+        await self._ws.send(json.dumps({"type": "response.create"}))
 
     async def _receive_loop(self) -> None:
         if not self._ws:
@@ -145,9 +207,20 @@ class XaiRealtimeSession:
                     if text and self._on_text:
                         await self._on_text(text)
 
+                elif event_type == "response.function_call_arguments.done":
+                    self._pending_tool_calls.append({
+                        "name": data.get("name", ""),
+                        "call_id": data.get("call_id", ""),
+                        "arguments": data.get("arguments", "{}"),
+                    })
+                    logger.info("Tool call queued: %s (call_id=%s)", data.get("name"), data.get("call_id"))
+
                 elif event_type == "response.done":
-                    if self._on_status:
-                        await self._on_status("idle")
+                    if self._pending_tool_calls:
+                        await self._handle_tool_calls()
+                    else:
+                        if self._on_status:
+                            await self._on_status("idle")
 
                 elif event_type == "input_audio_buffer.speech_started":
                     if self._on_status:

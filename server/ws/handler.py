@@ -239,12 +239,30 @@ async def websocket_endpoint(ws: WebSocket) -> None:
                                     from server.realtime.xai import XaiRealtimeSession
                                     voice = msg.get("voice_id") or settings.xai_tts_voice or "Eve"
                                     rt_voice = voice.capitalize() if voice.capitalize() in {"Eve", "Ara", "Rex", "Sal", "Leo"} else "Eve"
+                                    rt_tools = tool_registry.get_schemas() if tool_registry and len(tool_registry) > 0 else None
+
+                                    async def _rt_tool_executor(name: str, args: dict) -> dict:
+                                        tool = tool_registry.get(name) if tool_registry else None
+                                        if not tool:
+                                            return {"error": f"Unknown tool: {name}"}
+                                        return await tool.execute(**args)
+
                                     realtime_session = XaiRealtimeSession(
                                         api_key=settings.xai_api_key,
                                         voice=rt_voice,
                                         instructions=session.system_prompt,
                                         sample_rate=24000,
+                                        tools=rt_tools,
+                                        tool_executor=_rt_tool_executor if rt_tools else None,
                                     )
+
+                                    async def _rt_on_tool_start(name: str, args: dict) -> None:
+                                        await send_json("tool_call.start", {"name": name, "arguments": args})
+
+                                    async def _rt_on_tool_result(name: str, result: dict) -> None:
+                                        success = "error" not in result
+                                        summary = result.get("error", json.dumps(result)[:200]) if not success else json.dumps(result)[:200]
+                                        await send_json("tool_call.result", {"name": name, "success": success, "summary": summary})
 
                                     await realtime_session.connect(
                                         on_audio=send_audio,
@@ -253,6 +271,8 @@ async def websocket_endpoint(ws: WebSocket) -> None:
                                         on_transcript=None,
                                         on_status=lambda s: send_status(s),
                                         on_text=lambda t: send_json("agent.text", {"text": t}),
+                                        on_tool_start=_rt_on_tool_start,
+                                        on_tool_result=_rt_on_tool_result,
                                     )
                                     await send_json(ServerMessageType.TTS_LOADED.value, {"provider": "grok-realtime"})
                                     logger.info("Switched to Grok Realtime mode for session %s", session_id)
