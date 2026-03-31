@@ -25,6 +25,7 @@ class GroqTTS(TTSProvider):
         self._model = model
         ssl_ctx = ssl.create_default_context(cafile=certifi.where())
         self._client = httpx.AsyncClient(timeout=30.0, verify=ssl_ctx)
+        logger.info("GroqTTS init: model=%s voice=%s key=%s...", model, voice, api_key[:8] if api_key else "MISSING")
 
     async def synthesize(self, text: str, voice_id: str = "") -> AsyncIterator[bytes]:
         if voice_id:
@@ -47,8 +48,9 @@ class GroqTTS(TTSProvider):
                 json=payload,
             )
             if response.status_code != 200:
-                logger.error("Groq TTS %s: %s", response.status_code, response.text[:500])
-                response.raise_for_status()
+                body = response.text[:500]
+                logger.error("Groq TTS %s: %s", response.status_code, body)
+                raise RuntimeError(f"Groq TTS HTTP {response.status_code}: {body}")
 
             wav_data = response.content
             with io.BytesIO(wav_data) as buf:

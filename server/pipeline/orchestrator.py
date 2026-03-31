@@ -338,7 +338,8 @@ class Orchestrator:
             raise
         except Exception as exc:
             logger.exception("TTS synthesis failed for: %s", text[:50])
-            await self._send_json("error", {"text": f"Voice synthesis failed: {type(exc).__name__}"})
+            detail = str(exc)[:300] if str(exc) else type(exc).__name__
+            await self._send_json("error", {"text": f"Voice synthesis failed: {detail}"})
         finally:
             if started:
                 await self._send_json("agent.audio.end", {})
