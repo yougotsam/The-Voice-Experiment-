@@ -38,6 +38,7 @@ export function VoiceAgent() {
   const [activePersona, setActivePersona] = useState("default");
   const [intelTab, setIntelTab] = useState<"crm" | "analytics">("crm");
   const [crmRefreshKey, setCrmRefreshKey] = useState(0);
+  const [serverConfig, setServerConfig] = useState<{ model_id: string; tts_provider: string } | null>(null);
   const agentTextBuffer = useRef("");
   const lastSpeakingEnd = useRef(0);
   const hasConnected = useRef(false);
@@ -198,6 +199,9 @@ export function VoiceAgent() {
           if (msg.category === "contact" || msg.category === "opportunity" || msg.category === "message") {
             setCrmRefreshKey((k) => k + 1);
           }
+          break;
+        case "config.current":
+          setServerConfig({ model_id: (msg as unknown as Record<string, string>).model_id, tts_provider: (msg as unknown as Record<string, string>).tts_provider });
           break;
         case "model.loaded":
           console.log("[Provider] LLM switched to:", msg.name);
@@ -425,7 +429,7 @@ export function VoiceAgent() {
         </h1>
 
         <div className="flex-1 flex items-center justify-center gap-2 min-w-0">
-          <EngineSelector onModelChange={handleModelChange} onTTSChange={handleTTSChange} />
+          <EngineSelector onModelChange={handleModelChange} onTTSChange={handleTTSChange} serverConfig={serverConfig} />
         </div>
 
         <div className="flex items-center gap-3 shrink-0">

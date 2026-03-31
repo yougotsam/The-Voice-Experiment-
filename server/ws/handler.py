@@ -14,7 +14,7 @@ from server.ws.protocol import (
 )
 from server.stt.assemblyai import AssemblyAISTT
 from server.llm.openai_compat import OpenAICompatLLM
-from server.llm.models import get_model
+from server.llm.models import get_model, MODEL_REGISTRY
 from server.tts.elevenlabs import ElevenLabsTTS
 from server.pipeline.orchestrator import Orchestrator
 from server.pipeline.session import ConversationSession
@@ -128,6 +128,21 @@ async def websocket_endpoint(ws: WebSocket) -> None:
 
         ws_manager.register(session_id, send_json)
         ping_task = asyncio.create_task(_ping_loop())
+
+        default_model_id = ""
+        for m in MODEL_REGISTRY.values():
+            if m.model == settings.llm_model and m.base_url == settings.llm_base_url:
+                default_model_id = m.id
+                break
+        default_tts = settings.tts_provider
+        if default_tts == "fallback":
+            tts_key_map = {"groq": "llm_api_key", "elevenlabs": "elevenlabs_api_key"}
+            chain = [n.strip() for n in settings.tts_fallback_chain.split(",") if n.strip()]
+            default_tts = next(
+                (n for n in chain if tts_key_map.get(n) is None or getattr(settings, tts_key_map.get(n, ""), "")),
+                chain[0] if chain else "groq",
+            )
+        await send_json(ServerMessageType.CONFIG_CURRENT.value, {"model_id": default_model_id, "tts_provider": default_tts})
 
         while True:
             data = await ws.receive()
