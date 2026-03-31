@@ -71,6 +71,7 @@ export function EngineSelector({ onModelChange, onTTSChange, onVoiceChange, serv
   const [synced, setSynced] = useState(false);
   const [voices, setVoices] = useState<ProviderOption[]>([]);
   const [activeVoice, setActiveVoice] = useState("");
+  const [loading, setLoading] = useState(true);
 
   useEffect(() => {
     Promise.all([
@@ -84,6 +85,8 @@ export function EngineSelector({ onModelChange, onTTSChange, onVoiceChange, serv
       setActiveModel(modelData.default || m[0]?.id || "");
       setActiveTTS(ttsData.default || t[0]?.id || "");
       setEngines(buildEngines(m, t));
+    }).finally(() => {
+      setLoading(false);
     });
   }, []);
 
@@ -131,6 +134,7 @@ export function EngineSelector({ onModelChange, onTTSChange, onVoiceChange, serv
 
   const handleEngineChange = useCallback(
     (engineId: string) => {
+      if (!engineId) return;
       setActiveEngine(engineId);
       const engine = engines.find((e) => e.id === engineId);
       if (!engine) return;
@@ -164,7 +168,7 @@ export function EngineSelector({ onModelChange, onTTSChange, onVoiceChange, serv
     [onTTSChange],
   );
 
-  const handleVoiceChange = useCallback(
+  const handleVoiceOverride = useCallback(
     (voiceId: string) => {
       setActiveVoice(voiceId);
       onVoiceChange?.(voiceId);
@@ -172,67 +176,83 @@ export function EngineSelector({ onModelChange, onTTSChange, onVoiceChange, serv
     [onVoiceChange],
   );
 
+  if (loading) {
+    return (
+      <div className="flex items-center gap-2">
+        <div className="h-7 w-32 rounded-lg bg-ivory/5 animate-pulse" />
+        <div className="h-7 w-20 rounded-lg bg-ivory/5 animate-pulse hidden sm:block" />
+      </div>
+    );
+  }
+
   if (engines.length === 0) return null;
 
   const activeEngineData = engines.find((e) => e.id === activeEngine);
 
   return (
-    <div className="flex items-center gap-2">
-      <select
-        value={activeEngine}
-        onChange={(e) => handleEngineChange(e.target.value)}
-        className="rounded-lg px-2.5 py-1.5 text-[11px] tracking-wide outline-none cursor-pointer transition-all duration-300 focus:ring-1 focus:ring-gold/30"
-        style={{
-          color: "rgba(244, 240, 234, 0.7)",
-          background: "rgba(10, 22, 36, 0.6)",
-          border: "1px solid rgba(200, 169, 126, 0.15)",
-        }}
-      >
-        {engines.map((e) => (
-          <option key={e.id} value={e.id}>{e.label}</option>
-        ))}
-        {!activeEngine && <option value="">Custom</option>}
-      </select>
-      {activeEngineData && (
-        <span className="text-[9px] tracking-wide hidden sm:inline" style={{ color: "rgba(244, 240, 234, 0.25)" }}>
-          {activeEngineData.description}
-        </span>
-      )}
-      <button
-        type="button"
-        onClick={() => setShowAdvanced(!showAdvanced)}
-        className="p-1 rounded-md transition-colors duration-200 hover:bg-gold/5"
-        title="Advanced settings"
-      >
-        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round"
-          style={{ color: showAdvanced ? "rgba(200, 169, 126, 0.6)" : "rgba(244, 240, 234, 0.25)" }}
+    <div className="flex items-center gap-2 flex-wrap">
+      <div className="flex items-center gap-2">
+        <select
+          value={activeEngine}
+          onChange={(e) => handleEngineChange(e.target.value)}
+          aria-label="Engine preset"
+          className="rounded-lg px-2.5 py-1.5 text-[11px] tracking-wide outline-none cursor-pointer
+            text-ivory/70 bg-slate-navy/60 border border-gold/15
+            transition-all duration-300 focus:ring-1 focus:ring-gold/30"
         >
-          <circle cx="12" cy="12" r="3" />
-          <path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83-2.83l.06-.06A1.65 1.65 0 0 0 4.68 15a1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 2.83-2.83l.06.06A1.65 1.65 0 0 0 9 4.68a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 2.83l-.06.06A1.65 1.65 0 0 0 19.4 9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z" />
-        </svg>
-      </button>
+          {engines.map((e) => (
+            <option key={e.id} value={e.id}>{e.label}</option>
+          ))}
+        </select>
+        {activeEngineData && (
+          <span className="text-[9px] tracking-wide text-ivory/25 hidden sm:inline">
+            {activeEngineData.description}
+          </span>
+        )}
+        {voices.length > 0 && (
+          <select
+            value={activeVoice}
+            onChange={(e) => handleVoiceOverride(e.target.value)}
+            aria-label="Voice"
+            className="rounded-lg px-2 py-1.5 text-[10px] tracking-wide outline-none cursor-pointer
+              text-ivory/50 bg-slate-navy/60 border border-gold/10
+              transition-all duration-300 focus:ring-1 focus:ring-gold/30"
+          >
+            {voices.map((v) => <option key={v.id} value={v.id}>{v.name}</option>)}
+          </select>
+        )}
+        <button
+          type="button"
+          onClick={() => setShowAdvanced(!showAdvanced)}
+          className="p-1 rounded-md transition-colors duration-200 hover:bg-gold/5"
+          title="Advanced settings"
+          aria-label="Toggle advanced engine settings"
+          aria-expanded={showAdvanced}
+        >
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round"
+            className={showAdvanced ? "text-gold-muted" : "text-ivory/25"}
+          >
+            <circle cx="12" cy="12" r="3" />
+            <path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83-2.83l.06-.06A1.65 1.65 0 0 0 4.68 15a1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 2.83-2.83l.06.06A1.65 1.65 0 0 0 9 4.68a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 2.83l-.06.06A1.65 1.65 0 0 0 19.4 9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z" />
+          </svg>
+        </button>
+      </div>
       {showAdvanced && (
-        <div className="flex items-center gap-2">
+        <div className="flex items-center gap-1.5">
           <select value={activeModel} onChange={(e) => handleModelOverride(e.target.value)}
-            className="rounded-lg px-2 py-1 text-[10px] outline-none cursor-pointer"
-            style={{ color: "rgba(244, 240, 234, 0.5)", background: "rgba(10, 22, 36, 0.6)", border: "1px solid rgba(200, 169, 126, 0.1)" }}
+            aria-label="LLM model"
+            className="rounded-lg px-2 py-1 text-[10px] outline-none cursor-pointer
+              text-ivory/50 bg-slate-navy/60 border border-gold/10"
           >
             {models.map((m) => <option key={m.id} value={m.id}>{m.name}</option>)}
           </select>
           <select value={activeTTS} onChange={(e) => handleTTSOverride(e.target.value)}
-            className="rounded-lg px-2 py-1 text-[10px] outline-none cursor-pointer"
-            style={{ color: "rgba(244, 240, 234, 0.5)", background: "rgba(10, 22, 36, 0.6)", border: "1px solid rgba(200, 169, 126, 0.1)" }}
+            aria-label="TTS provider"
+            className="rounded-lg px-2 py-1 text-[10px] outline-none cursor-pointer
+              text-ivory/50 bg-slate-navy/60 border border-gold/10"
           >
             {ttsProviders.map((p) => <option key={p.id} value={p.id}>{p.name}</option>)}
           </select>
-          {voices.length > 1 && (
-            <select value={activeVoice} onChange={(e) => handleVoiceChange(e.target.value)}
-              className="rounded-lg px-2 py-1 text-[10px] outline-none cursor-pointer"
-              style={{ color: "rgba(244, 240, 234, 0.5)", background: "rgba(10, 22, 36, 0.6)", border: "1px solid rgba(200, 169, 126, 0.1)" }}
-            >
-              {voices.map((v) => <option key={v.id} value={v.id}>{v.name}</option>)}
-            </select>
-          )}
         </div>
       )}
     </div>

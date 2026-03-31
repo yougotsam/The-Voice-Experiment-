@@ -1,31 +1,20 @@
 "use client";
 
-type Metrics = {
-  llm_ttfb_ms: number;
-  tts_ttfb_ms: number;
-  total_ms: number;
-};
+import type { Metrics } from "@/types";
 
 type MetricsOverlayProps = {
   metrics: Metrics | null;
 };
 
 function badge(label: string, value: number) {
-  const { color, borderColor } =
-    value < 300
-      ? { color: "rgba(126, 200, 160, 0.8)", borderColor: "rgba(126, 200, 160, 0.25)" }
-      : value < 800
-        ? { color: "rgba(226, 198, 126, 0.8)", borderColor: "rgba(226, 198, 126, 0.25)" }
-        : { color: "rgba(200, 126, 126, 0.7)", borderColor: "rgba(200, 126, 126, 0.2)" };
+  const tier = value < 300 ? "good" : value < 800 ? "ok" : "slow";
+  const classes = {
+    good: "text-[rgba(126,200,160,0.8)] border-[rgba(126,200,160,0.25)]",
+    ok: "text-[rgba(226,198,126,0.8)] border-[rgba(226,198,126,0.25)]",
+    slow: "text-[rgba(200,126,126,0.7)] border-[rgba(200,126,126,0.2)]",
+  };
   return (
-    <span
-      className="inline-flex items-center gap-1.5 rounded-full px-3 py-1 text-[10px] font-mono tracking-wide"
-      style={{
-        color,
-        border: `1px solid ${borderColor}`,
-        background: "rgba(10, 22, 36, 0.4)",
-      }}
-    >
+    <span className={`inline-flex items-center gap-1.5 rounded-full px-3 py-1 text-[10px] font-mono tracking-wide border bg-slate-navy/40 ${classes[tier]}`}>
       {label}{" "}
       <strong>{value}</strong>ms
     </span>
