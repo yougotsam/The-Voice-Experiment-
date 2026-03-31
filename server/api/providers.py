@@ -7,6 +7,7 @@ router = APIRouter(prefix="/api/providers", tags=["providers"])
 
 TTS_PROVIDERS = [
     {"id": "groq", "name": "Groq (Orpheus)", "key_setting": "llm_api_key"},
+    {"id": "xai", "name": "xAI", "key_setting": "xai_api_key"},
     {"id": "elevenlabs", "name": "ElevenLabs", "key_setting": "elevenlabs_api_key"},
     {"id": "piper", "name": "Piper (Local)", "key_setting": None},
 ]
@@ -48,6 +49,13 @@ VOICE_OPTIONS: dict[str, list[dict[str, str]]] = {
         {"id": "austin", "name": "Austin (Male)"},
         {"id": "daniel", "name": "Daniel (Male)"},
     ],
+    "xai": [
+        {"id": "eve", "name": "Eve (Energetic)"},
+        {"id": "ara", "name": "Ara (Warm)"},
+        {"id": "rex", "name": "Rex (Confident)"},
+        {"id": "sal", "name": "Sal (Balanced)"},
+        {"id": "leo", "name": "Leo (Authoritative)"},
+    ],
     "piper": [
         {"id": "en_US-lessac-medium", "name": "Lessac (Default)"},
     ],
@@ -60,6 +68,8 @@ async def get_voices(provider_id: str):
     default = ""
     if provider_id == "groq":
         default = settings.groq_tts_voice
+    elif provider_id == "xai":
+        default = settings.xai_tts_voice
     elif provider_id == "elevenlabs":
         default = settings.elevenlabs_voice_id
         voices = [{"id": default, "name": "Default Voice"}]

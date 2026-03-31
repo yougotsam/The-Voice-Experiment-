@@ -10,8 +10,9 @@ class Settings(BaseSettings):
     elevenlabs_voice_id: str = "JBFqnCBsd6RMkjVDRZzb"
     groq_tts_voice: str = "autumn"
     groq_tts_model: str = "canopylabs/orpheus-v1-english"
+    xai_tts_voice: str = "eve"
     tts_provider: str = "fallback"
-    tts_fallback_chain: str = "groq,elevenlabs,piper"
+    tts_fallback_chain: str = "groq,xai,elevenlabs,piper"
     host: str = "0.0.0.0"
     port: int = 8000
     gemini_api_key: str = ""

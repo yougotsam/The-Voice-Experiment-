@@ -38,14 +38,15 @@ function buildEngines(models: ProviderOption[], ttsProviders: ProviderOption[]):
     const tts = groqTTS || ttsProviders[0];
     engines.push({ id: "gemini-pipeline", label: "Gemini Pipeline", description: `Gemini Flash + ${tts?.name || "TTS"}`, modelId: gemini.id, ttsId: tts?.id });
   }
+  const xaiTTS = ttsProviders.find((p) => p.id === "xai");
   const grok = models.find((m) => m.id === "xai-grok-3");
   if (grok) {
-    const tts = groqTTS || ttsProviders[0];
+    const tts = xaiTTS || groqTTS || ttsProviders[0];
     engines.push({ id: "grok-pipeline", label: "Grok Pipeline", description: `Grok 3 + ${tts?.name || "TTS"}`, modelId: grok.id, ttsId: tts?.id });
   }
   const grokMini = models.find((m) => m.id === "xai-grok-mini");
   if (grokMini) {
-    const tts = groqTTS || ttsProviders[0];
+    const tts = xaiTTS || groqTTS || ttsProviders[0];
     engines.push({ id: "grok-fast", label: "Grok Fast", description: `Grok 3 Mini + ${tts?.name || "TTS"}`, modelId: grokMini.id, ttsId: tts?.id });
   }
   const elevenlabs = ttsProviders.find((p) => p.id === "elevenlabs");
