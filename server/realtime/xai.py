@@ -178,7 +178,10 @@ class XaiRealtimeSession:
             }))
             logger.info("Tool '%s' result sent to xAI Realtime (call_id=%s)", name, call_id)
 
-        await self._ws.send(json.dumps({"type": "response.create"}))
+        await self._ws.send(json.dumps({
+            "type": "response.create",
+            "response": {"modalities": ["text", "audio"]},
+        }))
 
     async def _receive_loop(self) -> None:
         if not self._ws:
