@@ -356,6 +356,7 @@ export function VoiceAgent() {
       try {
         await startMic();
       } catch {
+        setAgentState("idle");
         return;
       }
       sendJSON({ type: "start" });

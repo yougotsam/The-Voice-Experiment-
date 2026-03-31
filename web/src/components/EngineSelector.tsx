@@ -74,7 +74,8 @@ export function EngineSelector({ onModelChange, onTTSChange }: EngineSelectorPro
         setActiveEngine(built[0].id);
       }
     });
-  }, [onModelChange, onTTSChange]);
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
   const handleEngineChange = useCallback(
     (engineId: string) => {
