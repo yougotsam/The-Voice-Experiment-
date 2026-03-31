@@ -27,16 +27,19 @@ class GroqTTS(TTSProvider):
         self._client = httpx.AsyncClient(timeout=30.0, verify=ssl_ctx)
         logger.info("GroqTTS init: model=%s voice=%s key=%s", model, voice, "SET" if api_key else "MISSING")
 
+    def set_voice(self, voice: str) -> None:
+        self._voice = voice
+        logger.info("Groq TTS voice changed to '%s'", voice)
+
     async def synthesize(self, text: str, voice_id: str = "") -> AsyncIterator[bytes]:
-        if voice_id:
-            logger.debug("Groq TTS does not support per-request voice_id, using default '%s'", self._voice)
+        active_voice = voice_id or self._voice
         if not text or not text.strip():
             return
         for chunk in self._split_text(text):
             payload = {
                 "model": self._model,
                 "input": chunk,
-                "voice": self._voice,
+                "voice": active_voice,
                 "response_format": "wav",
             }
             response = await self._client.post(

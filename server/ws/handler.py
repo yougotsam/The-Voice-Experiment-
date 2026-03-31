@@ -213,17 +213,40 @@ async def websocket_endpoint(ws: WebSocket) -> None:
                             await send_json("error", {"text": f"Unknown TTS provider: {tts_provider_id}"})
                         else:
                             try:
-                                new_tts = _create_single_tts(tts_provider_id)
+                                primary = _create_single_tts(tts_provider_id)
+                                fallback_names = [n.strip() for n in settings.tts_fallback_chain.split(",") if n.strip()]
+                                others = []
+                                for name in fallback_names:
+                                    if name != tts_provider_id:
+                                        try:
+                                            others.append(_create_single_tts(name))
+                                        except Exception:
+                                            logger.info("Fallback TTS provider '%s' not available, skipping", name, exc_info=True)
+                                if others:
+                                    from server.tts.fallback import FallbackTTS
+                                    new_tts = FallbackTTS([primary] + others)
+                                else:
+                                    new_tts = primary
                                 if orchestrator:
                                     await orchestrator.set_tts(new_tts)
                                 tts = new_tts
                                 await send_json(ServerMessageType.TTS_LOADED.value, {
                                     "provider": tts_provider_id,
                                 })
-                                logger.info("TTS switched to %s for session %s", tts_provider_id, session_id)
+                                logger.info("TTS switched to %s (with %d fallbacks) for session %s", tts_provider_id, len(others), session_id)
                             except Exception:
                                 logger.exception("Failed to switch TTS to %s", tts_provider_id)
                                 await send_json("error", {"text": f"Failed to load TTS provider: {tts_provider_id}"})
+
+                    voice_id = msg.get("voice_id")
+                    if voice_id and isinstance(voice_id, str):
+                        active_tts = tts
+                        if hasattr(active_tts, '_providers'):
+                            active_tts = active_tts._providers[0]
+                        if hasattr(active_tts, 'set_voice'):
+                            active_tts.set_voice(voice_id)
+                            await send_json("voice.loaded", {"voice_id": voice_id})
+                            logger.info("Voice changed to %s for session %s", voice_id, session_id)
 
     except WebSocketDisconnect:
         logger.info("WS disconnected: %s", session_id)
