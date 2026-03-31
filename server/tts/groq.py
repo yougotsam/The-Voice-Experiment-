@@ -57,7 +57,8 @@ class GroqTTS(TTSProvider):
                 with wave.open(buf, "rb") as wf:
                     chunk_rate = wf.getframerate()
                     if chunk_rate != self.sample_rate:
-                        logger.warning("Groq returned sample_rate=%d, expected %d", chunk_rate, self.sample_rate)
+                        logger.warning("Groq returned sample_rate=%d, updating from %d", chunk_rate, self.sample_rate)
+                        self.sample_rate = chunk_rate
                     pcm_data = wf.readframes(wf.getnframes())
             yield pcm_data
 
