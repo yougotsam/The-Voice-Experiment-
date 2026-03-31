@@ -134,17 +134,30 @@ class Orchestrator:
 
             agent = get_agent("default")
             active_tools = self._tool_registry
+            integration_notice = ""
             if self._router and self._router.should_route(user_text):
                 agent = await self._router.classify(user_text, self._llm)
                 if agent.tools and self._tool_registry:
-                    active_tools = self._tool_registry.subset(agent.tools)
+                    scoped = self._tool_registry.subset(agent.tools)
+                    if len(scoped) > 0:
+                        active_tools = scoped
+                    else:
+                        integration = agent.integration_name or "the required integration"
+                        integration_notice = (
+                            f"\n\nNOTE: The user's request relates to {agent.name.lower()} capabilities, "
+                            f"but {integration} is not connected. "
+                            f"Tell the user clearly that this feature requires connecting "
+                            f"{integration} by adding the appropriate API credentials "
+                            "to the environment configuration."
+                        )
+                        agent = get_agent("default")
                 if agent.id != "default":
                     await self._send_json("agent.routed", {"agent_id": agent.id, "name": agent.name})
             if self._metrics:
                 self._metrics.record_agent(agent.id)
 
             tools = active_tools.get_schemas() if active_tools and len(active_tools) > 0 else None
-            system_prompt = self._build_system_prompt(tools, agent.system_prompt_addon)
+            system_prompt = self._build_system_prompt(tools, agent.system_prompt_addon + integration_notice)
 
             llm_measured = False
             tts_measured = False

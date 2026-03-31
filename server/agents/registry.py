@@ -27,6 +27,7 @@ _register(
             "create_opportunity",
             "move_opportunity",
         ],
+        integration_name="GoHighLevel CRM",
     ),
     AgentConfig(
         id="comms",
@@ -42,6 +43,7 @@ _register(
             "send_email",
             "get_conversations",
         ],
+        integration_name="GoHighLevel CRM",
     ),
     AgentConfig(
         id="calendar",
@@ -54,6 +56,7 @@ _register(
         tools=[
             "get_calendar_events",
         ],
+        integration_name="GoHighLevel CRM",
     ),
     AgentConfig(
         id="creative",
