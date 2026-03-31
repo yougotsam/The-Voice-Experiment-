@@ -11,6 +11,7 @@ import { VoiceOrb } from "./VoiceOrb";
 import { CRMPanel } from "./CRMPanel";
 import { EngineSelector } from "./EngineSelector";
 import { AnalyticsPanel, type SessionAnalytics } from "./AnalyticsPanel";
+import { PERSONAS } from "./PersonaSelector";
 import type { StagingEntry } from "./StagingArea";
 import type { AgentState, InputMode, Metrics } from "@/types";
 
@@ -21,14 +22,6 @@ const MAX_TEXT_INPUT = 2000;
 const MAX_STAGING_ENTRIES = 50;
 
 type MobileTab = "conversation" | "voice" | "intel";
-
-const PERSONAS = [
-  { id: "default", name: "Zeebs", tagline: "Strategist & Closer" },
-  { id: "sales", name: "Sales Pro", tagline: "Deals & Objections" },
-  { id: "ops", name: "Ops Architect", tagline: "Systems & Automation" },
-  { id: "creative", name: "Creative Director", tagline: "Brand & Content" },
-  { id: "empathic", name: "Companion", tagline: "Listen & Reflect" },
-];
 
 export function VoiceAgent() {
   const [state, setState] = useState<AgentState>("idle");

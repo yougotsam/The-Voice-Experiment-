@@ -70,7 +70,7 @@ export function TranscriptPanel({
   return (
     <div>
       <div className="space-y-3 pr-1">
-        {feed.map((item, i) => {
+        {feed.map((item) => {
           if (item.kind === "staging") {
             const s = item.entry;
             return (
@@ -108,7 +108,7 @@ export function TranscriptPanel({
           const entry = item.entry;
           if (entry.role === "system") {
             return (
-              <div key={i} className="flex justify-center py-1">
+              <div key={`${entry.role}-${entry.timestamp}`} className="flex justify-center py-1">
                 <span
                   className="rounded-full px-3 py-0.5 text-[9px] font-medium uppercase tracking-widest"
                   style={{ color: "rgba(200, 169, 126, 0.6)", background: "rgba(200, 169, 126, 0.08)", border: "1px solid rgba(200, 169, 126, 0.15)" }}
@@ -120,7 +120,7 @@ export function TranscriptPanel({
           }
 
           return (
-            <div key={i} className="flex gap-3">
+            <div key={`${entry.role}-${entry.timestamp}`} className="flex gap-3">
               <div
                 className="mt-1.5 h-1.5 w-1.5 rounded-full shrink-0"
                 style={{

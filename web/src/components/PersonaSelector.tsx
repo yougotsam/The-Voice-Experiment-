@@ -8,7 +8,7 @@ type Persona = {
   tagline: string;
 };
 
-const PERSONAS: Persona[] = [
+export const PERSONAS: Persona[] = [
   { id: "default", name: "Zeebs", tagline: "Strategist & Closer" },
   { id: "sales", name: "Sales Pro", tagline: "Deals & Objections" },
   { id: "ops", name: "Ops Architect", tagline: "Systems & Automation" },
