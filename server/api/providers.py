@@ -37,3 +37,32 @@ async def get_tts_providers():
         default = next((n for n in chain if n in available_ids), available[0]["id"] if available else "")
 
     return {"providers": available, "default": default}
+
+
+VOICE_OPTIONS: dict[str, list[dict[str, str]]] = {
+    "groq": [
+        {"id": "autumn", "name": "Autumn (Female)"},
+        {"id": "diana", "name": "Diana (Female)"},
+        {"id": "hannah", "name": "Hannah (Female)"},
+        {"id": "troy", "name": "Troy (Male)"},
+        {"id": "austin", "name": "Austin (Male)"},
+        {"id": "daniel", "name": "Daniel (Male)"},
+    ],
+    "piper": [
+        {"id": "en_US-lessac-medium", "name": "Lessac (Default)"},
+    ],
+}
+
+
+@router.get("/voices/{provider_id}")
+async def get_voices(provider_id: str):
+    voices = VOICE_OPTIONS.get(provider_id, [])
+    default = ""
+    if provider_id == "groq":
+        default = settings.groq_tts_voice
+    elif provider_id == "elevenlabs":
+        default = settings.elevenlabs_voice_id
+        voices = [{"id": default, "name": "Default Voice"}]
+    elif provider_id == "piper":
+        default = "en_US-lessac-medium"
+    return {"voices": voices, "default": default}
