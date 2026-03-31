@@ -216,7 +216,7 @@ export function VoiceAgent() {
 
   const handleBinary = useCallback(
     (data: ArrayBuffer) => {
-      if (stateRef.current === "listening" || stateRef.current === "idle") return;
+      if (stateRef.current === "listening") return;
       if (stateRef.current !== "speaking") {
         setAgentState("speaking");
       }
@@ -272,7 +272,12 @@ export function VoiceAgent() {
     }
     stopPlayback();
     agentTextBuffer.current = "";
-    await startMic();
+    try {
+      await startMic();
+    } catch {
+      setAgentState("idle");
+      return;
+    }
     sendJSON({ type: "start" });
     setAgentState("listening");
   }, [startMic, sendJSON, stopPlayback, doInterrupt, setAgentState]);
@@ -348,7 +353,12 @@ export function VoiceAgent() {
       }
       stopPlayback();
       agentTextBuffer.current = "";
-      await startMic();
+      try {
+        await startMic();
+      } catch {
+        setAgentState("idle");
+        return;
+      }
       sendJSON({ type: "start" });
       setAgentState("listening");
     },

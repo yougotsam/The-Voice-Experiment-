@@ -71,13 +71,11 @@ export function EngineSelector({ onModelChange, onTTSChange }: EngineSelectorPro
       const built = buildEngines(m, t);
       setEngines(built);
       if (built.length > 0) {
-        const first = built[0];
-        setActiveEngine(first.id);
-        if (first.modelId) onModelChange(first.modelId);
-        if (first.ttsId) onTTSChange(first.ttsId);
+        setActiveEngine(built[0].id);
       }
     });
-  }, [onModelChange, onTTSChange]);
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
   const handleEngineChange = useCallback(
     (engineId: string) => {
