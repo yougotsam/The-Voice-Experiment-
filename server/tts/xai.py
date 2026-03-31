@@ -26,12 +26,13 @@ class XaiTTS(TTSProvider):
         self._client = httpx.AsyncClient(timeout=30.0, verify=ssl_ctx)
         logger.info("XaiTTS init: voice=%s key=%s", self._voice, "SET" if api_key else "MISSING")
 
-    def set_voice(self, voice: str) -> None:
+    def set_voice(self, voice: str) -> bool:
         if voice not in VOICES:
             logger.warning("Unknown xAI voice '%s', keeping '%s'", voice, self._voice)
-            return
+            return False
         self._voice = voice
         logger.info("xAI TTS voice changed to '%s'", voice)
+        return True
 
     async def synthesize(self, text: str, voice_id: str = "") -> AsyncIterator[bytes]:
         if not self._api_key:

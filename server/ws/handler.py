@@ -301,9 +301,12 @@ async def websocket_endpoint(ws: WebSocket) -> None:
                     voice_id = msg.get("voice_id")
                     if voice_id and isinstance(voice_id, str):
                         if hasattr(tts, 'set_voice'):
-                            tts.set_voice(voice_id)
-                            await send_json("voice.loaded", {"voice_id": voice_id})
-                            logger.info("Voice changed to %s for session %s", voice_id, session_id)
+                            result = tts.set_voice(voice_id)
+                            if result is False:
+                                await send_json("error", {"text": f"Unknown voice '{voice_id}' for current TTS provider"})
+                            else:
+                                await send_json("voice.loaded", {"voice_id": voice_id})
+                                logger.info("Voice changed to %s for session %s", voice_id, session_id)
                         else:
                             await send_json("error", {"text": "Current TTS provider does not support voice switching"})
 

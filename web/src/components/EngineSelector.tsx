@@ -111,6 +111,8 @@ export function EngineSelector({ onModelChange, onTTSChange, onVoiceChange, serv
   }, [engines, activeEngine, synced]);
 
   useEffect(() => {
+    setVoices([]);
+    setActiveVoice("");
     if (!activeTTS) return;
     let cancelled = false;
     fetch(`${API_BASE}/api/providers/voices/${activeTTS}`)

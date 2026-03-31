@@ -27,9 +27,15 @@ class GroqTTS(TTSProvider):
         self._client = httpx.AsyncClient(timeout=30.0, verify=ssl_ctx)
         logger.info("GroqTTS init: model=%s voice=%s key=%s", model, voice, "SET" if api_key else "MISSING")
 
-    def set_voice(self, voice: str) -> None:
+    KNOWN_VOICES = {"autumn", "diana", "hannah", "troy", "austin", "daniel"}
+
+    def set_voice(self, voice: str) -> bool:
+        if self.KNOWN_VOICES and voice not in self.KNOWN_VOICES:
+            logger.warning("Unknown Groq voice '%s', keeping '%s'", voice, self._voice)
+            return False
         self._voice = voice
         logger.info("Groq TTS voice changed to '%s'", voice)
+        return True
 
     async def synthesize(self, text: str, voice_id: str = "") -> AsyncIterator[bytes]:
         active_voice = voice_id or self._voice
