@@ -146,7 +146,7 @@ async def ghl_webhook(request: Request) -> Response:
         logger.warning("Webhook received non-JSON payload")
         return Response(status_code=400)
 
-    logger.info("GHL webhook received: %s", {k: v for k, v in body.items() if k in ("event", "type", "event_type", "first_name", "name")})
+    logger.info("GHL webhook received: %s", {k: v for k, v in body.items() if k in ("event", "type", "event_type")})
 
     event = _normalize_event(body)
     if event:
