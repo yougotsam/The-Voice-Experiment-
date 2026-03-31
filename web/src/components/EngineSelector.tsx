@@ -16,6 +16,7 @@ type Engine = {
 type EngineSelectorProps = {
   onModelChange: (modelId: string) => void;
   onTTSChange: (providerId: string) => void;
+  serverConfig?: { model_id: string; tts_provider: string } | null;
 };
 
 const API_BASE = process.env.NEXT_PUBLIC_API_URL || "http://localhost:8000";
@@ -41,6 +42,11 @@ function buildEngines(models: ProviderOption[], ttsProviders: ProviderOption[]):
     const tts = groqTTS || ttsProviders[0];
     engines.push({ id: "grok-pipeline", label: "Grok Pipeline", description: `Grok 3 + ${tts?.name || "TTS"}`, modelId: grok.id, ttsId: tts?.id });
   }
+  const grokMini = models.find((m) => m.id === "xai-grok-mini");
+  if (grokMini) {
+    const tts = groqTTS || ttsProviders[0];
+    engines.push({ id: "grok-fast", label: "Grok Fast", description: `Grok 3 Mini + ${tts?.name || "TTS"}`, modelId: grokMini.id, ttsId: tts?.id });
+  }
   const elevenlabs = ttsProviders.find((p) => p.id === "elevenlabs");
   if (groqModel && elevenlabs) {
     engines.push({ id: "studio", label: "Studio", description: "Llama 70B + ElevenLabs (HQ)", modelId: groqModel.id, ttsId: elevenlabs.id });
@@ -48,7 +54,7 @@ function buildEngines(models: ProviderOption[], ttsProviders: ProviderOption[]):
   return engines;
 }
 
-export function EngineSelector({ onModelChange, onTTSChange }: EngineSelectorProps) {
+export function EngineSelector({ onModelChange, onTTSChange, serverConfig }: EngineSelectorProps) {
   const [engines, setEngines] = useState<Engine[]>([]);
   const [activeEngine, setActiveEngine] = useState("");
   const [showAdvanced, setShowAdvanced] = useState(false);
@@ -56,6 +62,7 @@ export function EngineSelector({ onModelChange, onTTSChange }: EngineSelectorPro
   const [ttsProviders, setTTSProviders] = useState<ProviderOption[]>([]);
   const [activeModel, setActiveModel] = useState("");
   const [activeTTS, setActiveTTS] = useState("");
+  const [synced, setSynced] = useState(false);
 
   useEffect(() => {
     Promise.all([
@@ -68,14 +75,24 @@ export function EngineSelector({ onModelChange, onTTSChange }: EngineSelectorPro
       setTTSProviders(t);
       setActiveModel(modelData.default || m[0]?.id || "");
       setActiveTTS(ttsData.default || t[0]?.id || "");
-      const built = buildEngines(m, t);
-      setEngines(built);
-      if (built.length > 0) {
-        setActiveEngine(built[0].id);
-      }
+      setEngines(buildEngines(m, t));
     });
-  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
+
+  useEffect(() => {
+    if (!serverConfig || engines.length === 0 || synced) return;
+    const match = engines.find((e) => e.modelId === serverConfig.model_id && e.ttsId === serverConfig.tts_provider);
+    if (match) {
+      setActiveEngine(match.id);
+      setActiveModel(match.modelId || "");
+      setActiveTTS(match.ttsId || "");
+    } else {
+      setActiveEngine("");
+      setActiveModel(serverConfig.model_id);
+      setActiveTTS(serverConfig.tts_provider);
+    }
+    setSynced(true);
+  }, [serverConfig, engines, synced]);
 
   const handleEngineChange = useCallback(
     (engineId: string) => {

@@ -29,4 +29,11 @@ async def get_tts_providers():
         key_setting = p["key_setting"]
         if key_setting is None or getattr(settings, key_setting, ""):
             available.append({"id": p["id"], "name": p["name"]})
-    return {"providers": available, "default": settings.tts_provider}
+
+    default = settings.tts_provider
+    if default == "fallback":
+        chain = [n.strip() for n in settings.tts_fallback_chain.split(",") if n.strip()]
+        available_ids = {p["id"] for p in available}
+        default = next((n for n in chain if n in available_ids), available[0]["id"] if available else "")
+
+    return {"providers": available, "default": default}
