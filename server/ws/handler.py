@@ -113,6 +113,8 @@ async def websocket_endpoint(ws: WebSocket) -> None:
             tool_registry.register(GHLSendEmail())
             tool_registry.register(GHLGetConversations())
             logger.info("GHL tools enabled (%d tools) for session %s", len(tool_registry), session_id)
+        else:
+            logger.info("GHL tools disabled for session %s: set GHL_API_KEY and GHL_LOCATION_ID in .env to enable CRM features", session_id)
 
         session_metrics = SessionMetrics(session_id)
         agent_router = AgentRouter()
