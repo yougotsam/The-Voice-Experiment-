@@ -80,19 +80,27 @@ export function EngineSelector({ onModelChange, onTTSChange, serverConfig }: Eng
   }, []);
 
   useEffect(() => {
-    if (!serverConfig || engines.length === 0 || synced) return;
-    const match = engines.find((e) => e.modelId === serverConfig.model_id && e.ttsId === serverConfig.tts_provider);
-    if (match) {
-      setActiveEngine(match.id);
-      setActiveModel(match.modelId || "");
-      setActiveTTS(match.ttsId || "");
-    } else {
-      setActiveEngine("");
-      setActiveModel(serverConfig.model_id);
-      setActiveTTS(serverConfig.tts_provider);
+    if (engines.length === 0 || synced) return;
+    if (serverConfig) {
+      const match = engines.find((e) => e.modelId === serverConfig.model_id && e.ttsId === serverConfig.tts_provider);
+      if (match) {
+        setActiveEngine(match.id);
+        setActiveModel(match.modelId || "");
+        setActiveTTS(match.ttsId || "");
+      } else {
+        setActiveEngine("");
+        setActiveModel(serverConfig.model_id);
+        setActiveTTS(serverConfig.tts_provider);
+      }
+      setSynced(true);
     }
-    setSynced(true);
   }, [serverConfig, engines, synced]);
+
+  useEffect(() => {
+    if (engines.length > 0 && !activeEngine && !synced) {
+      setActiveEngine(engines[0].id);
+    }
+  }, [engines, activeEngine, synced]);
 
   const handleEngineChange = useCallback(
     (engineId: string) => {

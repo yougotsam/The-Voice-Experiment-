@@ -136,8 +136,12 @@ async def websocket_endpoint(ws: WebSocket) -> None:
                 break
         default_tts = settings.tts_provider
         if default_tts == "fallback":
+            tts_key_map = {"groq": "llm_api_key", "elevenlabs": "elevenlabs_api_key"}
             chain = [n.strip() for n in settings.tts_fallback_chain.split(",") if n.strip()]
-            default_tts = chain[0] if chain else "groq"
+            default_tts = next(
+                (n for n in chain if tts_key_map.get(n) is None or getattr(settings, tts_key_map.get(n, ""), "")),
+                chain[0] if chain else "groq",
+            )
         await send_json("config.current", {"model_id": default_model_id, "tts_provider": default_tts})
 
         while True:
