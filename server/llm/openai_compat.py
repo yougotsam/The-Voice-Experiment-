@@ -36,7 +36,8 @@ class OpenAICompatLLM(LLMProvider):
         self._http_client = _make_http_client()
         self._client = AsyncOpenAI(api_key=api_key, base_url=base_url, http_client=self._http_client)
         try:
-            asyncio.get_event_loop().create_task(old_http.aclose())
+            loop = asyncio.get_running_loop()
+            loop.create_task(old_http.aclose())
         except RuntimeError:
             pass
 
