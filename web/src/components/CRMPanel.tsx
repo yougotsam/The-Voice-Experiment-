@@ -33,7 +33,11 @@ type CRMView = "contacts" | "pipeline" | "conversations";
 
 const API_BASE = process.env.NEXT_PUBLIC_API_URL || "http://localhost:8000";
 
-export function CRMPanel() {
+type CRMPanelProps = {
+  refreshKey?: number;
+};
+
+export function CRMPanel({ refreshKey = 0 }: CRMPanelProps) {
   const [view, setView] = useState<CRMView>("contacts");
   const [contacts, setContacts] = useState<Contact[]>([]);
   const [opportunities, setOpportunities] = useState<Opportunity[]>([]);
@@ -81,7 +85,7 @@ export function CRMPanel() {
 
   useEffect(() => {
     fetchData(view);
-  }, [view, fetchData]);
+  }, [view, fetchData, refreshKey]);
 
   const handleSearch = (e: React.FormEvent) => {
     e.preventDefault();

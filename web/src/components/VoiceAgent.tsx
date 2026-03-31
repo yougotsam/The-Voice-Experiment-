@@ -36,6 +36,7 @@ export function VoiceAgent() {
   const [mobileTab, setMobileTab] = useState<MobileTab>("voice");
   const [activePersona, setActivePersona] = useState("default");
   const [intelTab, setIntelTab] = useState<"crm" | "analytics">("crm");
+  const [crmRefreshKey, setCrmRefreshKey] = useState(0);
   const agentTextBuffer = useRef("");
   const cappedSetEntries = useCallback(
     (updater: (prev: TranscriptEntry[]) => TranscriptEntry[]) => {
@@ -181,6 +182,17 @@ export function VoiceAgent() {
               ...prev,
               { role: "system" as const, text: msg.name!, timestamp: Date.now() },
             ]);
+          }
+          break;
+        case "webhook.event":
+          if (msg.summary) {
+            cappedSetEntries((prev) => [
+              ...prev,
+              { role: "system" as const, text: `[CRM] ${msg.summary}`, timestamp: Date.now() },
+            ]);
+          }
+          if (msg.category === "contact" || msg.category === "opportunity" || msg.category === "message") {
+            setCrmRefreshKey((k) => k + 1);
           }
           break;
         case "model.loaded":
@@ -537,7 +549,7 @@ export function VoiceAgent() {
             ))}
           </div>
           <div className="flex-1 overflow-y-auto p-4">
-            {intelTab === "crm" ? <CRMPanel /> : <AnalyticsPanel sessionMetrics={sessionAnalytics} />}
+            {intelTab === "crm" ? <CRMPanel refreshKey={crmRefreshKey} /> : <AnalyticsPanel sessionMetrics={sessionAnalytics} />}
           </div>
         </div>
       </div>
