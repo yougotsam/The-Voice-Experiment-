@@ -269,24 +269,22 @@ All variables are defined in `.env.example`. Copy to `.env` and fill in real key
 
 ## 12. Development Notes
 
-**User's machine**: MacBook Pro 16GB i9, macOS, Python 3.13 at `/Library/Frameworks/Python.framework/Versions/3.13/`
-
-**User's project path**: `/Users/sameerahmed/The-Voice-Experiment-`
+**Requirements**: macOS or Linux, Python 3.13+, Node.js 18+
 
 **How to start** (two separate terminal tabs):
 ```bash
 # Tab 1 — Backend
-cd /Users/sameerahmed/The-Voice-Experiment-
+cd /path/to/The-Voice-Experiment-
 python3 -m server.main
 
 # Tab 2 — Frontend
-cd /Users/sameerahmed/The-Voice-Experiment-/web
+cd /path/to/The-Voice-Experiment-/web
 npm run dev
 ```
 
 **How to pull latest changes**:
 ```bash
-cd /Users/sameerahmed/The-Voice-Experiment-
+cd /path/to/The-Voice-Experiment-
 git pull origin main
 ```
 
