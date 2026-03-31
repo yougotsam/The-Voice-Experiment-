@@ -25,7 +25,7 @@ class GroqTTS(TTSProvider):
         self._model = model
         ssl_ctx = ssl.create_default_context(cafile=certifi.where())
         self._client = httpx.AsyncClient(timeout=30.0, verify=ssl_ctx)
-        logger.info("GroqTTS init: model=%s voice=%s key=%s...", model, voice, api_key[:8] if api_key else "MISSING")
+        logger.info("GroqTTS init: model=%s voice=%s key=%s", model, voice, "SET" if api_key else "MISSING")
 
     async def synthesize(self, text: str, voice_id: str = "") -> AsyncIterator[bytes]:
         if voice_id:
