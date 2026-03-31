@@ -20,6 +20,11 @@ class ElevenLabsTTS(TTSProvider):
         self._api_key = api_key
         self._voice_id = voice_id
 
+    def set_voice(self, voice: str) -> bool:
+        self._voice_id = voice
+        logger.info("ElevenLabs TTS voice changed to '%s'", voice)
+        return True
+
     async def synthesize(self, text: str, voice_id: str = "") -> AsyncIterator[bytes]:
         if not self._api_key:
             raise RuntimeError("ElevenLabs API key not configured")
