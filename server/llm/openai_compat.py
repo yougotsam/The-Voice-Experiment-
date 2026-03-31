@@ -1,3 +1,4 @@
+import asyncio
 import json
 import logging
 import ssl
@@ -14,15 +15,15 @@ logger = logging.getLogger(__name__)
 LLM_TIMEOUT = httpx.Timeout(connect=10.0, read=60.0, write=10.0, pool=10.0)
 
 
-def _make_openai_client(api_key: str, base_url: str) -> AsyncOpenAI:
+def _make_http_client() -> httpx.AsyncClient:
     ssl_ctx = ssl.create_default_context(cafile=certifi.where())
-    http_client = httpx.AsyncClient(timeout=LLM_TIMEOUT, verify=ssl_ctx)
-    return AsyncOpenAI(api_key=api_key, base_url=base_url, http_client=http_client)
+    return httpx.AsyncClient(timeout=LLM_TIMEOUT, verify=ssl_ctx)
 
 
 class OpenAICompatLLM(LLMProvider):
     def __init__(self, api_key: str, base_url: str, model: str):
-        self._client = _make_openai_client(api_key, base_url)
+        self._http_client = _make_http_client()
+        self._client = AsyncOpenAI(api_key=api_key, base_url=base_url, http_client=self._http_client)
         self._model = model
 
     @property
@@ -30,8 +31,14 @@ class OpenAICompatLLM(LLMProvider):
         return self._model
 
     def set_model(self, model: str, base_url: str, api_key: str) -> None:
+        old_http = self._http_client
         self._model = model
-        self._client = _make_openai_client(api_key, base_url)
+        self._http_client = _make_http_client()
+        self._client = AsyncOpenAI(api_key=api_key, base_url=base_url, http_client=self._http_client)
+        try:
+            asyncio.get_event_loop().create_task(old_http.aclose())
+        except RuntimeError:
+            pass
 
     async def stream_chat(
         self,

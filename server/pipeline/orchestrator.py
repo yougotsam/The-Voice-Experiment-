@@ -149,8 +149,17 @@ class Orchestrator:
     async def _on_partial_transcript(self, text: str) -> None:
         await self._send_json("transcript.partial", {"text": text})
 
+    async def _cancel_pending_response(self) -> None:
+        if self._response_task and not self._response_task.done():
+            self._response_task.cancel()
+            try:
+                await self._response_task
+            except (asyncio.CancelledError, Exception):
+                pass
+
     async def _on_final_transcript(self, text: str) -> None:
         await self._send_json("transcript.final", {"text": text})
+        await self._cancel_pending_response()
         self._response_task = asyncio.create_task(self._safe_process_response(text))
 
     async def _safe_process_response(self, text: str) -> None:
@@ -176,6 +185,7 @@ class Orchestrator:
             await self._send_status("idle")
 
     async def process_text_input(self, text: str) -> None:
+        await self._cancel_pending_response()
         self._response_task = asyncio.create_task(self._safe_process_response(text))
 
     async def _process_response(self, user_text: str) -> None:
