@@ -336,8 +336,9 @@ class Orchestrator:
                 await self._send_audio(audio_chunk)
         except asyncio.CancelledError:
             raise
-        except Exception:
+        except Exception as exc:
             logger.exception("TTS synthesis failed for: %s", text[:50])
+            await self._send_json("error", {"text": f"Voice synthesis failed: {type(exc).__name__}"})
         finally:
             if started:
                 await self._send_json("agent.audio.end", {})

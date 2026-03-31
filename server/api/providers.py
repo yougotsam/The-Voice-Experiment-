@@ -6,7 +6,7 @@ from server.llm.models import list_available_models, MODEL_REGISTRY
 router = APIRouter(prefix="/api/providers", tags=["providers"])
 
 TTS_PROVIDERS = [
-    {"id": "groq", "name": "Groq (PlayAI)", "key_setting": "llm_api_key"},
+    {"id": "groq", "name": "Groq (Orpheus)", "key_setting": "llm_api_key"},
     {"id": "elevenlabs", "name": "ElevenLabs", "key_setting": "elevenlabs_api_key"},
     {"id": "piper", "name": "Piper (Local)", "key_setting": None},
 ]
