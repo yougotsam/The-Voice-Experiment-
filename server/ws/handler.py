@@ -298,27 +298,14 @@ async def websocket_endpoint(ws: WebSocket) -> None:
                                 realtime_session = None
                                 logger.info("Exited Grok Realtime mode for session %s", session_id)
                             try:
-                                primary = _create_single_tts(tts_provider_id)
-                                fallback_names = [n.strip() for n in settings.tts_fallback_chain.split(",") if n.strip()]
-                                others = []
-                                for name in fallback_names:
-                                    if name != tts_provider_id:
-                                        try:
-                                            others.append(_create_single_tts(name))
-                                        except Exception:
-                                            logger.info("Fallback TTS provider '%s' not available, skipping", name, exc_info=True)
-                                if others:
-                                    from server.tts.fallback import FallbackTTS
-                                    new_tts = FallbackTTS([primary] + others)
-                                else:
-                                    new_tts = primary
+                                new_tts = _create_single_tts(tts_provider_id)
                                 if orchestrator:
                                     await orchestrator.set_tts(new_tts)
                                 tts = new_tts
                                 await send_json(ServerMessageType.TTS_LOADED.value, {
                                     "provider": tts_provider_id,
                                 })
-                                logger.info("TTS switched to %s (with %d fallbacks) for session %s", tts_provider_id, len(others), session_id)
+                                logger.info("TTS switched to %s for session %s", tts_provider_id, session_id)
                             except Exception:
                                 logger.exception("Failed to switch TTS to %s", tts_provider_id)
                                 await send_json("error", {"text": f"Failed to load TTS provider: {tts_provider_id}"})
