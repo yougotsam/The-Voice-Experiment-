@@ -212,6 +212,11 @@ async def websocket_endpoint(ws: WebSocket) -> None:
 
     except WebSocketDisconnect:
         logger.info("WS disconnected: %s", session_id)
+    except RuntimeError as exc:
+        if "disconnect" in str(exc).lower():
+            logger.info("WS disconnected (runtime): %s", session_id)
+        else:
+            logger.exception("WS error: %s", session_id)
     except Exception:
         logger.exception("WS error: %s", session_id)
     finally:

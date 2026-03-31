@@ -1,7 +1,9 @@
 import logging
 import re
+import ssl
 from typing import Any
 
+import certifi
 import httpx
 
 from server.tools.base import Tool
@@ -20,8 +22,10 @@ _http_client: httpx.AsyncClient | None = None
 def _get_client() -> httpx.AsyncClient:
     global _http_client
     if _http_client is None or _http_client.is_closed:
+        ssl_ctx = ssl.create_default_context(cafile=certifi.where())
         _http_client = httpx.AsyncClient(
             timeout=10.0,
+            verify=ssl_ctx,
             headers={
                 "Authorization": f"Bearer {settings.ghl_api_key}",
                 "Version": "2021-07-28",

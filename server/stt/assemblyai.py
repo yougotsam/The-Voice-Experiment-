@@ -1,8 +1,10 @@
 import asyncio
 import json
 import logging
+import ssl
 from typing import Callable, Awaitable
 
+import certifi
 import websockets
 from websockets.asyncio.client import ClientConnection
 
@@ -35,7 +37,8 @@ class AssemblyAISTT(STTProvider):
             "Authorization": self._api_key,
             "AssemblyAI-Version": "2025-05-12",
         }
-        self._ws = await websockets.connect(url, additional_headers=extra_headers)
+        ssl_ctx = ssl.create_default_context(cafile=certifi.where())
+        self._ws = await websockets.connect(url, additional_headers=extra_headers, ssl=ssl_ctx)
 
         session_msg = await self._ws.recv()
         session_data = json.loads(session_msg)

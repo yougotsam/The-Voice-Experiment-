@@ -1,8 +1,10 @@
 import asyncio
 import json
 import logging
+import ssl
 from typing import AsyncIterator
 
+import certifi
 import websockets
 from websockets.asyncio.client import ClientConnection
 
@@ -30,7 +32,8 @@ class ElevenLabsTTS(TTSProvider):
         headers = {"xi-api-key": self._api_key}
         logger.debug("Connecting to ElevenLabs TTS: %s", url)
 
-        async with websockets.connect(url + params, additional_headers=headers) as ws:
+        ssl_ctx = ssl.create_default_context(cafile=certifi.where())
+        async with websockets.connect(url + params, additional_headers=headers, ssl=ssl_ctx) as ws:
             bos = {
                 "text": " ",
                 "voice_settings": {

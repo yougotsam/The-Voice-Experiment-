@@ -1,8 +1,10 @@
 import io
 import logging
+import ssl
 import wave
 from typing import AsyncIterator
 
+import certifi
 import httpx
 
 from server.tts.base import TTSProvider
@@ -19,7 +21,8 @@ class GroqTTS(TTSProvider):
         self._api_key = api_key
         self._voice = voice
         self._model = model
-        self._client = httpx.AsyncClient(timeout=30.0)
+        ssl_ctx = ssl.create_default_context(cafile=certifi.where())
+        self._client = httpx.AsyncClient(timeout=30.0, verify=ssl_ctx)
 
     async def synthesize(self, text: str, voice_id: str = "") -> AsyncIterator[bytes]:
         if voice_id:
