@@ -11,9 +11,11 @@ import { VoiceOrb } from "./VoiceOrb";
 import { CRMPanel } from "./CRMPanel";
 import { EngineSelector } from "./EngineSelector";
 import { AnalyticsPanel, type SessionAnalytics } from "./AnalyticsPanel";
-import { PERSONAS } from "./PersonaSelector";
+import { PersonaSelector } from "./PersonaSelector";
 import type { StagingEntry } from "./StagingArea";
 import type { AgentState, InputMode, Metrics } from "@/types";
+
+const ERROR_TOAST_MS = 5000;
 
 const WS_URL = process.env.NEXT_PUBLIC_WS_URL || "ws://localhost:8000/ws";
 const STUCK_TIMEOUT_MS = 30000;
@@ -39,6 +41,8 @@ export function VoiceAgent() {
   const [intelTab, setIntelTab] = useState<"crm" | "analytics">("crm");
   const [crmRefreshKey, setCrmRefreshKey] = useState(0);
   const [serverConfig, setServerConfig] = useState<{ model_id: string; tts_provider: string } | null>(null);
+  const [errorToast, setErrorToast] = useState<string | null>(null);
+  const errorTimer = useRef<ReturnType<typeof setTimeout> | undefined>(undefined);
   const agentTextBuffer = useRef("");
   const lastSpeakingEnd = useRef(0);
   const hasConnected = useRef(false);
@@ -211,6 +215,9 @@ export function VoiceAgent() {
           break;
         case "error":
           console.error("Server error:", msg.text);
+          clearTimeout(errorTimer.current);
+          setErrorToast(msg.text || "An error occurred");
+          errorTimer.current = setTimeout(() => setErrorToast(null), ERROR_TOAST_MS);
           stopPlayback();
           setAgentState("idle");
           break;
@@ -440,40 +447,41 @@ export function VoiceAgent() {
         </div>
 
         <div className="flex items-center gap-3 shrink-0">
-          <select
-            value={activePersona}
-            onChange={(e) => handlePersona(e.target.value)}
-            className="rounded-lg px-2.5 py-1.5 text-[11px] tracking-wide outline-none cursor-pointer transition-all duration-300 focus:ring-1 focus:ring-gold/30"
-            style={{
-              color: "rgba(226, 198, 157, 0.9)",
-              background: "rgba(10, 22, 36, 0.6)",
-              border: "1px solid rgba(200, 169, 126, 0.2)",
-            }}
-          >
-            {PERSONAS.map((p) => (
-              <option key={p.id} value={p.id}>{p.name}</option>
-            ))}
-          </select>
-
+          <PersonaSelector activePersona={activePersona} onSelect={handlePersona} />
           <div className="flex items-center gap-1.5">
             <div className={`h-1.5 w-1.5 rounded-full transition-colors duration-500 ${connected ? "bg-gold shadow-[0_0_6px_rgba(200,169,126,0.5)]" : "bg-red-400/60"}`} />
-            <span className="text-[10px] uppercase tracking-widest hidden sm:inline" style={{ color: "rgba(244, 240, 234, 0.4)" }}>
+            <span className="text-[10px] uppercase tracking-widest hidden sm:inline text-ivory/40">
               {connected ? "Online" : "Offline"}
             </span>
           </div>
         </div>
       </header>
 
+      {errorToast && (
+        <div
+          className="mx-4 mt-2 px-4 py-2.5 rounded-xl text-sm flex items-center justify-between
+            bg-red-400/10 border border-red-400/20 text-red-300/90 animate-[fadeIn_0.2s_ease-out]"
+          role="alert"
+        >
+          <span className="text-[12px]">{errorToast}</span>
+          <button
+            type="button"
+            onClick={() => { clearTimeout(errorTimer.current); setErrorToast(null); }}
+            className="ml-3 text-red-300/50 hover:text-red-300/80 transition-colors text-lg leading-none"
+            aria-label="Dismiss error"
+          >
+            &times;
+          </button>
+        </div>
+      )}
+
       <div className="flex flex-1 overflow-hidden">
         <div
           className={`w-80 xl:w-[340px] shrink-0 flex-col glass-panel m-3 mr-1.5 rounded-2xl overflow-hidden ${mobileTab === "conversation" ? "flex" : "hidden"} lg:flex`}
         >
-          <div
-            className="px-4 py-3 flex items-center justify-between shrink-0"
-            style={{ borderBottom: "1px solid rgba(200, 169, 126, 0.06)" }}
-          >
+          <div className="px-4 py-3 flex items-center justify-between shrink-0 border-b border-gold/6">
             <span className="micro-label">Conversation</span>
-            <span className="text-[10px] font-mono" style={{ color: "rgba(244, 240, 234, 0.2)" }}>
+            <span className="text-[10px] font-mono text-ivory/20">
               {entries.length || ""}
             </span>
           </div>
@@ -488,8 +496,8 @@ export function VoiceAgent() {
           {!connected && hasConnected.current && (
             <div className="absolute inset-0 flex items-center justify-center bg-[rgba(10,22,36,0.8)] z-30 rounded-2xl">
               <div className="text-center" role="status" aria-live="polite" aria-atomic="true">
-                <p className="text-sm" style={{ color: "rgba(244, 240, 234, 0.7)" }}>Connection lost</p>
-                <p className="text-xs mt-1" style={{ color: "rgba(244, 240, 234, 0.3)" }}>Reconnecting...</p>
+                <p className="text-sm text-ivory/70">Connection lost</p>
+                <p className="text-xs mt-1 text-ivory/30">Reconnecting...</p>
               </div>
             </div>
           )}
@@ -508,11 +516,8 @@ export function VoiceAgent() {
             <button
               type="button"
               onClick={handleModeSwitch}
-              className="text-[10px] uppercase tracking-widest px-3 py-1 rounded-full transition-all duration-300 hover:text-gold-light"
-              style={{
-                color: "rgba(244, 240, 234, 0.4)",
-                border: "1px solid rgba(200, 169, 126, 0.15)",
-              }}
+              className="text-[10px] uppercase tracking-widest px-3 py-1 rounded-full
+                text-ivory/40 border border-gold/15 transition-all duration-300 hover:text-gold-light hover:border-gold/25"
             >
               {inputMode === "push" ? "Push to Talk" : "Hands Free"}
             </button>
@@ -521,11 +526,8 @@ export function VoiceAgent() {
               <button
                 type="button"
                 onClick={() => { doInterrupt(); setAgentState("idle"); }}
-                className="px-3 py-1 rounded-full text-[10px] font-medium uppercase tracking-widest transition-all duration-300 hover:bg-gold/10"
-                style={{
-                  color: "rgba(244, 240, 234, 0.5)",
-                  border: "1px solid rgba(200, 169, 126, 0.2)",
-                }}
+                className="px-3 py-1 rounded-full text-[10px] font-medium uppercase tracking-widest
+                  text-ivory/50 border border-gold/20 transition-all duration-300 hover:bg-gold/10"
               >
                 Interrupt
               </button>
@@ -540,20 +542,16 @@ export function VoiceAgent() {
               placeholder="Type a message..."
               maxLength={MAX_TEXT_INPUT}
               disabled={!connected}
-              className="flex-1 rounded-xl px-4 py-2.5 text-sm text-ivory placeholder:text-ivory/30 outline-none transition-all duration-300 focus:ring-1 focus:ring-gold/30 disabled:opacity-30"
-              style={{
-                background: "rgba(10, 22, 36, 0.6)",
-                border: "1px solid rgba(200, 169, 126, 0.15)",
-              }}
+              className="flex-1 rounded-xl px-4 py-2.5 text-sm text-ivory placeholder:text-ivory/30
+                bg-slate-navy/60 border border-gold/15 outline-none
+                transition-all duration-300 focus:ring-1 focus:ring-gold/30 disabled:opacity-30"
             />
             <button
               type="submit"
               disabled={!connected || !textInput.trim()}
-              className="rounded-xl px-5 py-2.5 text-[11px] font-medium uppercase tracking-widest transition-all duration-300 hover:bg-gold/10 disabled:opacity-30 disabled:cursor-not-allowed"
-              style={{
-                color: "rgba(244, 240, 234, 0.7)",
-                border: "1px solid rgba(200, 169, 126, 0.2)",
-              }}
+              className="rounded-xl px-5 py-2.5 text-[11px] font-medium uppercase tracking-widest
+                text-ivory/70 border border-gold/20
+                transition-all duration-300 hover:bg-gold/10 disabled:opacity-30 disabled:cursor-not-allowed"
             >
               Send
             </button>
@@ -563,21 +561,18 @@ export function VoiceAgent() {
         <div
           className={`w-80 xl:w-[340px] shrink-0 flex-col glass-panel m-3 ml-1.5 rounded-2xl overflow-hidden ${mobileTab === "intel" ? "flex" : "hidden"} lg:flex`}
         >
-          <div className="flex shrink-0" style={{ borderBottom: "1px solid rgba(200, 169, 126, 0.06)" }}>
+          <div className="flex shrink-0 border-b border-gold/6">
             {(["crm", "analytics"] as const).map((tab) => (
               <button
                 key={tab}
                 type="button"
                 onClick={() => setIntelTab(tab)}
-                className="flex-1 px-3 py-3 text-[10px] font-medium uppercase tracking-[0.15em] transition-all duration-300 relative"
-                style={{
-                  color: intelTab === tab ? "rgba(226, 198, 157, 0.9)" : "rgba(244, 240, 234, 0.3)",
-                  background: intelTab === tab ? "rgba(200, 169, 126, 0.06)" : "transparent",
-                }}
+                className={`flex-1 px-3 py-3 text-[10px] font-medium uppercase tracking-[0.15em] transition-all duration-300 relative
+                  ${intelTab === tab ? "text-gold-light bg-gold/6" : "text-ivory/30"}`}
               >
                 {tab === "crm" ? "CRM" : "Analytics"}
                 {intelTab === tab && (
-                  <div className="absolute bottom-0 left-1/4 right-1/4 h-px" style={{ background: "rgba(200, 169, 126, 0.4)" }} />
+                  <div className="absolute bottom-0 left-1/4 right-1/4 h-px bg-gold/40" />
                 )}
               </button>
             ))}
@@ -597,11 +592,8 @@ export function VoiceAgent() {
             key={tab.id}
             type="button"
             onClick={() => setMobileTab(tab.id)}
-            className="flex-1 flex flex-col items-center gap-1 py-3 transition-all duration-200"
-            style={{
-              color: mobileTab === tab.id ? "rgba(226, 198, 157, 0.9)" : "rgba(244, 240, 234, 0.3)",
-              background: mobileTab === tab.id ? "rgba(200, 169, 126, 0.04)" : "transparent",
-            }}
+            className={`flex-1 flex flex-col items-center gap-1 py-3 transition-all duration-200
+              ${mobileTab === tab.id ? "text-gold-light bg-gold/4" : "text-ivory/30"}`}
           >
             {tab.icon}
             <span className="text-[9px] uppercase tracking-wider font-medium">
