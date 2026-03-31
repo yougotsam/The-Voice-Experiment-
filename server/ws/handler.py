@@ -240,13 +240,12 @@ async def websocket_endpoint(ws: WebSocket) -> None:
 
                     voice_id = msg.get("voice_id")
                     if voice_id and isinstance(voice_id, str):
-                        active_tts = tts
-                        if hasattr(active_tts, '_providers'):
-                            active_tts = active_tts._providers[0]
-                        if hasattr(active_tts, 'set_voice'):
-                            active_tts.set_voice(voice_id)
+                        if hasattr(tts, 'set_voice'):
+                            tts.set_voice(voice_id)
                             await send_json("voice.loaded", {"voice_id": voice_id})
                             logger.info("Voice changed to %s for session %s", voice_id, session_id)
+                        else:
+                            await send_json("error", {"text": "Current TTS provider does not support voice switching"})
 
     except WebSocketDisconnect:
         logger.info("WS disconnected: %s", session_id)

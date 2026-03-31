@@ -112,12 +112,15 @@ export function EngineSelector({ onModelChange, onTTSChange, onVoiceChange, serv
       .then((r) => r.json())
       .then((data) => {
         if (cancelled) return;
-        setVoices(data.voices || []);
-        setActiveVoice(data.default || data.voices?.[0]?.id || "");
+        const v = data.voices || [];
+        const defaultVoice = data.default || v[0]?.id || "";
+        setVoices(v);
+        setActiveVoice(defaultVoice);
+        if (synced && defaultVoice) onVoiceChange?.(defaultVoice);
       })
       .catch(() => { if (!cancelled) { setVoices([]); setActiveVoice(""); } });
     return () => { cancelled = true; };
-  }, [activeTTS]);
+  }, [activeTTS, synced, onVoiceChange]);
 
   const handleEngineChange = useCallback(
     (engineId: string) => {
