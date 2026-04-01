@@ -65,15 +65,19 @@ class PiperTTS(TTSProvider):
     async def synthesize(self, text: str, voice_id: str = "") -> AsyncIterator[bytes]:
         if not text or not text.strip():
             return
+        model = self._model
+        if voice_id and voice_id in self._voices:
+            model = self._voices[voice_id]
         loop = asyncio.get_running_loop()
-        audio = await loop.run_in_executor(None, self._generate_sync, text)
+        audio = await loop.run_in_executor(None, self._generate_sync, text, model)
         if audio:
             yield audio
 
-    def _generate_sync(self, text: str) -> bytes:
+    def _generate_sync(self, text: str, model: str | None = None) -> bytes:
+        model = model or self._model
         try:
             result = subprocess.run(
-                [self._piper_bin, "--model", self._model, "--output-raw"],
+                [self._piper_bin, "--model", model, "--output-raw"],
                 input=text.encode("utf-8"),
                 capture_output=True, timeout=60,
             )
