@@ -65,6 +65,14 @@ _register(
         base_url="https://api.x.ai/v1",
         api_key_setting="xai_api_key",
     ),
+    ModelConfig(
+        id=f"ollama-{settings.ollama_model}",
+        name=f"{settings.ollama_model} (Local)",
+        provider="ollama",
+        model=settings.ollama_model,
+        base_url=settings.ollama_base_url,
+        api_key_setting="ollama_api_key",
+    ),
 )
 
 
