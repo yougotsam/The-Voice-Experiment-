@@ -1,5 +1,4 @@
 import asyncio
-import json
 import logging
 import shutil
 import subprocess
@@ -23,28 +22,7 @@ class PiperTTS(TTSProvider):
                 "Install with: pip install piper-tts  (or place the piper binary on PATH)"
             )
         self._model = model
-        self._detect_sample_rate()
         logger.info("Piper TTS ready: model=%s sample_rate=%d bin=%s", model, self.sample_rate, self._piper_bin)
-
-    def _detect_sample_rate(self) -> None:
-        try:
-            result = subprocess.run(
-                [self._piper_bin, "--model", self._model, "--json-input", "--output-raw"],
-                input=json.dumps({"text": "hi"}).encode(),
-                capture_output=True, timeout=30,
-            )
-            config_line = None
-            for line in result.stderr.decode(errors="replace").splitlines():
-                if "sample_rate" in line or '"sr"' in line:
-                    config_line = line
-                    break
-            if config_line:
-                import re
-                m = re.search(r'"(?:sample_rate|sr)"\s*:\s*(\d+)', config_line)
-                if m:
-                    self.sample_rate = int(m.group(1))
-        except Exception:
-            pass
 
     def set_voice(self, voice: str) -> bool:
         logger.warning("Piper TTS uses local models — voice switching not supported (model: %s)", self._model)
