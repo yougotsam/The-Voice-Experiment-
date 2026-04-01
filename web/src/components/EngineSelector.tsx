@@ -59,9 +59,9 @@ function buildEngines(models: ProviderOption[], ttsProviders: ProviderOption[]):
   }
   const ollamaModel = models.find((m) => m.id.startsWith("ollama-"));
   const piperTTS = ttsProviders.find((p) => p.id === "piper");
-  if (ollamaModel) {
+  if (ollamaModel && (piperTTS || groqTTS || ttsProviders.length)) {
     const tts = piperTTS || groqTTS || ttsProviders[0];
-    engines.push({ id: "local", label: "Local", description: `${ollamaModel.name} + ${tts?.name || "TTS"}`, modelId: ollamaModel.id, ttsId: tts?.id });
+    engines.push({ id: "local", label: "Local", description: `${ollamaModel.name} + ${tts.name}`, modelId: ollamaModel.id, ttsId: tts.id });
   }
   return engines;
 }
