@@ -40,14 +40,15 @@ class PiperTTS(TTSProvider):
 
         if default_voice in self._voices:
             self._model = self._voices[default_voice]
+            self._voice_name = default_voice
         elif self._voices:
             first = next(iter(self._voices))
             self._model = self._voices[first]
+            self._voice_name = first
             logger.warning("Default voice '%s' not found, using '%s'", default_voice, first)
         else:
             self._model = default_voice
-
-        self._voice_name = default_voice
+            self._voice_name = default_voice
         logger.info("Piper TTS ready: voice=%s model=%s bin=%s", self._voice_name, self._model, self._piper_bin)
 
     def set_voice(self, voice: str) -> bool:
