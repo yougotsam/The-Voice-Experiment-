@@ -27,35 +27,35 @@ function buildEngines(models: ProviderOption[], ttsProviders: ProviderOption[]):
   const groqModel = models.find((m) => m.id.startsWith("groq-llama-70b"));
   const groqTTS = ttsProviders.find((p) => p.id === "groq");
   if (groqModel && groqTTS) {
-    engines.push({ id: "groq-pipeline", label: "Groq Pipeline", description: "Llama 3.3 70B + Orpheus TTS", modelId: groqModel.id, ttsId: groqTTS.id });
+    engines.push({ id: "groq-pipeline", label: "Balanced", description: "Llama 70B + Groq voice", modelId: groqModel.id, ttsId: groqTTS.id });
   }
   const groq8b = models.find((m) => m.id.startsWith("groq-llama-8b"));
   if (groq8b && groqTTS) {
-    engines.push({ id: "groq-fast", label: "Groq Fast", description: "Llama 3.1 8B + Orpheus TTS", modelId: groq8b.id, ttsId: groqTTS.id });
+    engines.push({ id: "groq-fast", label: "Fast", description: "Llama 8B + Groq voice", modelId: groq8b.id, ttsId: groqTTS.id });
   }
   const gemini = models.find((m) => m.id.startsWith("gemini"));
   if (gemini) {
     const tts = groqTTS || ttsProviders[0];
-    engines.push({ id: "gemini-pipeline", label: "Gemini Pipeline", description: `Gemini Flash + ${tts?.name || "TTS"}`, modelId: gemini.id, ttsId: tts?.id });
+    engines.push({ id: "gemini-pipeline", label: "Gemini", description: `Gemini Flash + ${tts?.name || "voice"}`, modelId: gemini.id, ttsId: tts?.id });
   }
   const xaiTTS = ttsProviders.find((p) => p.id === "xai");
   const grok = models.find((m) => m.id === "xai-grok-3");
   if (grok) {
     const tts = xaiTTS || groqTTS || ttsProviders[0];
-    engines.push({ id: "grok-pipeline", label: "Grok Pipeline", description: `Grok 3 + ${tts?.name || "TTS"}`, modelId: grok.id, ttsId: tts?.id });
+    engines.push({ id: "grok-pipeline", label: "Grok", description: `Grok 3 + ${tts?.name || "voice"}`, modelId: grok.id, ttsId: tts?.id });
   }
   const grokMini = models.find((m) => m.id === "xai-grok-mini");
   if (grokMini) {
     const tts = xaiTTS || groqTTS || ttsProviders[0];
-    engines.push({ id: "grok-fast", label: "Grok Fast", description: `Grok 3 Mini + ${tts?.name || "TTS"}`, modelId: grokMini.id, ttsId: tts?.id });
+    engines.push({ id: "grok-fast", label: "Grok Fast", description: `Grok Mini + ${tts?.name || "voice"}`, modelId: grokMini.id, ttsId: tts?.id });
   }
   const grokRealtime = ttsProviders.find((p) => p.id === "grok-realtime");
   if (grokRealtime) {
-    engines.push({ id: "grok-realtime", label: "Grok Realtime", description: "Speech-to-Speech (No STT/TTS chain)", ttsId: grokRealtime.id, integrated: true });
+    engines.push({ id: "grok-realtime", label: "Realtime", description: "Live speech-to-speech", ttsId: grokRealtime.id, integrated: true });
   }
   const elevenlabs = ttsProviders.find((p) => p.id === "elevenlabs");
   if (groqModel && elevenlabs) {
-    engines.push({ id: "studio", label: "Studio", description: "Llama 70B + ElevenLabs (HQ)", modelId: groqModel.id, ttsId: elevenlabs.id });
+    engines.push({ id: "studio", label: "Studio", description: "Llama 70B + ElevenLabs", modelId: groqModel.id, ttsId: elevenlabs.id });
   }
   const ollamaModel = models.find((m) => m.id.startsWith("ollama-"));
   const piperTTS = ttsProviders.find((p) => p.id === "piper");

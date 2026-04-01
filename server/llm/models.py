@@ -27,7 +27,7 @@ def _register(*models: ModelConfig) -> None:
 _register(
     ModelConfig(
         id="groq-llama-70b",
-        name="Llama 3.3 70B (Groq)",
+        name="Llama 70B",
         provider="groq",
         model="llama-3.3-70b-versatile",
         base_url="https://api.groq.com/openai/v1",
@@ -35,7 +35,7 @@ _register(
     ),
     ModelConfig(
         id="groq-llama-8b",
-        name="Llama 3.1 8B (Groq)",
+        name="Llama 8B Fast",
         provider="groq",
         model="llama-3.1-8b-instant",
         base_url="https://api.groq.com/openai/v1",
@@ -43,7 +43,7 @@ _register(
     ),
     ModelConfig(
         id="gemini-flash",
-        name="Gemini 2.5 Flash (Google)",
+        name="Gemini Flash",
         provider="gemini",
         model="gemini-2.5-flash",
         base_url="https://generativelanguage.googleapis.com/v1beta/openai/",
@@ -51,7 +51,7 @@ _register(
     ),
     ModelConfig(
         id="xai-grok-mini",
-        name="Grok 3 Mini (xAI)",
+        name="Grok Mini",
         provider="xai",
         model="grok-3-mini-fast",
         base_url="https://api.x.ai/v1",
@@ -59,7 +59,7 @@ _register(
     ),
     ModelConfig(
         id="xai-grok-3",
-        name="Grok 3 (xAI)",
+        name="Grok 3",
         provider="xai",
         model="grok-3-fast",
         base_url="https://api.x.ai/v1",
@@ -67,7 +67,7 @@ _register(
     ),
     ModelConfig(
         id=f"ollama-{settings.ollama_model}",
-        name=f"{settings.ollama_model} (Local)",
+        name="Gemma Local",
         provider="ollama",
         model=settings.ollama_model,
         base_url=settings.ollama_base_url,
