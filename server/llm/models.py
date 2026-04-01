@@ -67,7 +67,7 @@ _register(
     ),
     ModelConfig(
         id=f"ollama-{settings.ollama_model}",
-        name="Gemma Local",
+        name=f"{settings.ollama_model.split(':')[0].capitalize()} Local",
         provider="ollama",
         model=settings.ollama_model,
         base_url=settings.ollama_base_url,
