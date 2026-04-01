@@ -1,40 +1,56 @@
 import asyncio
-import io
 import logging
-import wave
+import shutil
+import subprocess
 from typing import AsyncIterator
 
 from server.tts.base import TTSProvider
 
 logger = logging.getLogger(__name__)
 
+PIPER_SAMPLE_RATE = 22050
+
 
 class PiperTTS(TTSProvider):
+    sample_rate: int = PIPER_SAMPLE_RATE
+
     def __init__(self, model: str = "en_US-lessac-medium"):
-        try:
-            from piper import PiperVoice
-        except ImportError:
-            raise ImportError("piper-tts is not installed. Install with: pip install piper-tts")
+        self._piper_bin = shutil.which("piper")
+        if not self._piper_bin:
+            raise RuntimeError(
+                "Piper CLI not found on PATH. "
+                "Install with: pip install piper-tts  (or place the piper binary on PATH)"
+            )
+        self._model = model
+        logger.info("Piper TTS ready: model=%s sample_rate=%d bin=%s", model, self.sample_rate, self._piper_bin)
 
-        from piper.download import ensure_voice_exists, get_voices, find_voice
-
-        data_dir = ensure_voice_exists(model, get_voices())
-        model_path, config_path = find_voice(model, [data_dir])
-        self._voice = PiperVoice.load(str(model_path), config_path=str(config_path))
-        self.sample_rate = self._voice.config.sample_rate
-        logger.info("Piper TTS loaded: %s (sample_rate=%d)", model, self.sample_rate)
+    def set_voice(self, voice: str) -> bool:
+        logger.warning("Piper TTS uses local models — voice switching not supported (model: %s)", self._model)
+        return False
 
     async def synthesize(self, text: str, voice_id: str = "") -> AsyncIterator[bytes]:
-        if voice_id:
-            logger.debug("Piper TTS does not support per-request voice_id, using loaded model")
+        if not text or not text.strip():
+            return
         loop = asyncio.get_running_loop()
         audio = await loop.run_in_executor(None, self._generate_sync, text)
-        yield audio
+        if audio:
+            yield audio
 
     def _generate_sync(self, text: str) -> bytes:
-        buf = io.BytesIO()
-        with wave.open(buf, "wb") as wf:
-            self._voice.synthesize(text, wf)
-
-        buf.seek(44)
-        return buf.read()
+        try:
+            result = subprocess.run(
+                [self._piper_bin, "--model", self._model, "--output-raw"],
+                input=text.encode("utf-8"),
+                capture_output=True, timeout=60,
+            )
+            if result.returncode != 0:
+                stderr = result.stderr.decode(errors="replace")[:500]
+                logger.error("Piper process failed (rc=%d): %s", result.returncode, stderr)
+                return b""
+            return result.stdout
+        except subprocess.TimeoutExpired:
+            logger.error("Piper synthesis timed out for text: %s...", text[:50])
+            return b""
+        except Exception:
+            logger.exception("Piper synthesis error")
+            return b""

@@ -96,7 +96,11 @@ async def websocket_endpoint(ws: WebSocket) -> None:
         session = ConversationSession(session_id)
         stt = AssemblyAISTT(settings.assemblyai_api_key)
         llm = OpenAICompatLLM(settings.llm_api_key, settings.llm_base_url, settings.llm_model)
-        tts = _create_tts()
+        try:
+            tts = _create_tts()
+        except Exception:
+            logger.exception("Default TTS failed to load, falling back to ElevenLabs")
+            tts = ElevenLabsTTS(settings.elevenlabs_api_key, settings.elevenlabs_voice_id)
 
         async def send_json(msg_type: str, data: dict) -> None:
             await ws.send_text(encode_message(ServerMessageType(msg_type), data))
