@@ -21,6 +21,9 @@ class Settings(BaseSettings):
     port: int = 8000
     gemini_api_key: str = ""
     xai_api_key: str = ""
+    ollama_base_url: str = "http://localhost:11434/v1"
+    ollama_model: str = "gemma3:4b"
+    ollama_api_key: str = "ollama"
     ghl_api_key: str = ""
     ghl_location_id: str = ""
     ghl_webhook_secret: str = ""

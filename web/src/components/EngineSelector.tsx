@@ -57,6 +57,12 @@ function buildEngines(models: ProviderOption[], ttsProviders: ProviderOption[]):
   if (groqModel && elevenlabs) {
     engines.push({ id: "studio", label: "Studio", description: "Llama 70B + ElevenLabs (HQ)", modelId: groqModel.id, ttsId: elevenlabs.id });
   }
+  const ollamaModel = models.find((m) => m.id.startsWith("ollama-"));
+  const piperTTS = ttsProviders.find((p) => p.id === "piper");
+  if (ollamaModel) {
+    const tts = piperTTS || groqTTS || ttsProviders[0];
+    engines.push({ id: "local", label: "Local", description: `${ollamaModel.name} + ${tts?.name || "TTS"}`, modelId: ollamaModel.id, ttsId: tts?.id });
+  }
   return engines;
 }
 
