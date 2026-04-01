@@ -117,5 +117,9 @@ async def get_voices(provider_id: str):
     elif provider_id == "cartesia":
         default = settings.cartesia_voice_id
     elif provider_id == "piper":
-        default = settings.piper_voice
+        configured = settings.piper_voice
+        if any(v.get("id") == configured for v in voices):
+            default = configured
+        elif voices:
+            default = voices[0].get("id", "")
     return {"voices": voices, "default": default}

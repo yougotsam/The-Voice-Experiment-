@@ -47,8 +47,10 @@ class PiperTTS(TTSProvider):
             self._voice_name = first
             logger.warning("Default voice '%s' not found, using '%s'", default_voice, first)
         else:
-            self._model = default_voice
-            self._voice_name = default_voice
+            raise RuntimeError(
+                f"No Piper voice models found. Set PIPER_MODELS_DIR to a directory "
+                f"containing .onnx voice files (searched: '{models_dir}')"
+            )
         logger.info("Piper TTS ready: voice=%s model=%s bin=%s", self._voice_name, self._model, self._piper_bin)
 
     def set_voice(self, voice: str) -> bool:
