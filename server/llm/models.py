@@ -66,8 +66,8 @@ _register(
         api_key_setting="xai_api_key",
     ),
     ModelConfig(
-        id="ollama-gemma3",
-        name="Gemma 3 4B (Local)",
+        id=f"ollama-{settings.ollama_model}",
+        name=f"{settings.ollama_model} (Local)",
         provider="ollama",
         model=settings.ollama_model,
         base_url=settings.ollama_base_url,
