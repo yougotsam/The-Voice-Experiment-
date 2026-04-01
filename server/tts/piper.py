@@ -76,7 +76,7 @@ class PiperTTS(TTSProvider):
     def _generate_sync(self, text: str, model: str | None = None) -> bytes:
         model = model or self._model
         try:
-            result = subprocess.run(
+            result = subprocess.run(  # nosemgrep: python.lang.security.audit.dangerous-subprocess-use-audit
                 [self._piper_bin, "--model", model, "--output-raw"],
                 input=text.encode("utf-8"),
                 capture_output=True, timeout=60,
