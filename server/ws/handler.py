@@ -57,7 +57,7 @@ def _create_single_tts(provider: str):
         return CartesiaTTS(settings.cartesia_api_key, settings.cartesia_voice_id)
     if provider == "piper":
         from server.tts.piper import PiperTTS
-        return PiperTTS()
+        return PiperTTS(models_dir=settings.piper_models_dir, default_voice=settings.piper_voice)
     if provider == "elevenlabs":
         return ElevenLabsTTS(settings.elevenlabs_api_key, settings.elevenlabs_voice_id)
     logger.warning("Unknown TTS provider '%s', falling back to ElevenLabs", provider)

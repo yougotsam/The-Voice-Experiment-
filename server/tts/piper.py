@@ -1,7 +1,9 @@
 import asyncio
 import logging
+import os
 import shutil
 import subprocess
+from pathlib import Path
 from typing import AsyncIterator
 
 from server.tts.base import TTSProvider
@@ -11,21 +13,50 @@ logger = logging.getLogger(__name__)
 PIPER_SAMPLE_RATE = 22050
 
 
+def _discover_voices(models_dir: str) -> dict[str, str]:
+    voices: dict[str, str] = {}
+    if not models_dir or not os.path.isdir(models_dir):
+        return voices
+    for f in Path(models_dir).glob("*.onnx"):
+        name = f.stem
+        voices[name] = str(f)
+    return voices
+
+
 class PiperTTS(TTSProvider):
     sample_rate: int = PIPER_SAMPLE_RATE
 
-    def __init__(self, model: str = "en_US-lessac-medium"):
+    def __init__(self, models_dir: str = "", default_voice: str = "hal"):
         self._piper_bin = shutil.which("piper")
         if not self._piper_bin:
             raise RuntimeError(
                 "Piper CLI not found on PATH. "
                 "Install with: pip install piper-tts  (or place the piper binary on PATH)"
             )
-        self._model = model
-        logger.info("Piper TTS ready: model=%s sample_rate=%d bin=%s", model, self.sample_rate, self._piper_bin)
+        self._models_dir = models_dir
+        self._voices = _discover_voices(models_dir)
+        if self._voices:
+            logger.info("Piper voices discovered: %s", list(self._voices.keys()))
+
+        if default_voice in self._voices:
+            self._model = self._voices[default_voice]
+        elif self._voices:
+            first = next(iter(self._voices))
+            self._model = self._voices[first]
+            logger.warning("Default voice '%s' not found, using '%s'", default_voice, first)
+        else:
+            self._model = default_voice
+
+        self._voice_name = default_voice
+        logger.info("Piper TTS ready: voice=%s model=%s bin=%s", self._voice_name, self._model, self._piper_bin)
 
     def set_voice(self, voice: str) -> bool:
-        logger.warning("Piper TTS uses local models — voice switching not supported (model: %s)", self._model)
+        if voice in self._voices:
+            self._model = self._voices[voice]
+            self._voice_name = voice
+            logger.info("Piper voice switched to '%s' (%s)", voice, self._model)
+            return True
+        logger.warning("Unknown Piper voice '%s', available: %s", voice, list(self._voices.keys()))
         return False
 
     async def synthesize(self, text: str, voice_id: str = "") -> AsyncIterator[bytes]:
