@@ -82,7 +82,8 @@ VOICE_OPTIONS: dict[str, list[dict[str, str]]] = {
         {"id": "aura-2-perseus-en", "name": "Perseus (Male, Strong)"},
     ],
     "piper": [
-        {"id": "en_US-lessac-medium", "name": "Lessac (Default)"},
+        {"id": "hal", "name": "Hal"},
+        {"id": "en_US-lessac-medium", "name": "Lessac"},
     ],
     "cartesia": [
         {"id": "79a125e8-cd45-4c13-8a67-188112f4dd22", "name": "British Lady"},
@@ -116,5 +117,9 @@ async def get_voices(provider_id: str):
     elif provider_id == "cartesia":
         default = settings.cartesia_voice_id
     elif provider_id == "piper":
-        default = "en_US-lessac-medium"
+        configured = settings.piper_voice
+        if any(v.get("id") == configured for v in voices):
+            default = configured
+        elif voices:
+            default = voices[0].get("id", "")
     return {"voices": voices, "default": default}

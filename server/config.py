@@ -21,6 +21,8 @@ class Settings(BaseSettings):
     port: int = 8000
     gemini_api_key: str = ""
     xai_api_key: str = ""
+    piper_models_dir: str = ""
+    piper_voice: str = "hal"
     ollama_base_url: str = "http://localhost:11434/v1"
     ollama_model: str = "gemma3:4b"
     ollama_api_key: str = "ollama"
