@@ -12,7 +12,7 @@ import { CRMPanel } from "./CRMPanel";
 import { EngineSelector } from "./EngineSelector";
 import { AnalyticsPanel, type SessionAnalytics } from "./AnalyticsPanel";
 import { PersonaSelector } from "./PersonaSelector";
-import type { StagingEntry } from "./StagingArea";
+import { StagingArea, type StagingEntry } from "./StagingArea";
 import type { AgentState, InputMode, Metrics } from "@/types";
 
 const ERROR_TOAST_MS = 5000;
@@ -38,7 +38,7 @@ export function VoiceAgent() {
   const [sessionAnalytics, setSessionAnalytics] = useState<SessionAnalytics | null>(null);
   const [mobileTab, setMobileTab] = useState<MobileTab>("voice");
   const [activePersona, setActivePersona] = useState("default");
-  const [intelTab, setIntelTab] = useState<"crm" | "analytics">("crm");
+  const [intelTab, setIntelTab] = useState<"crm" | "analytics" | "drafts">("crm");
   const [crmRefreshKey, setCrmRefreshKey] = useState(0);
   const [serverConfig, setServerConfig] = useState<{ model_id: string; tts_provider: string } | null>(null);
   const [errorToast, setErrorToast] = useState<string | null>(null);
@@ -562,7 +562,7 @@ export function VoiceAgent() {
           className={`w-80 xl:w-[340px] shrink-0 flex-col glass-panel m-3 ml-1.5 rounded-2xl overflow-hidden ${mobileTab === "intel" ? "flex" : "hidden"} lg:flex`}
         >
           <div className="flex shrink-0 border-b border-gold/6">
-            {(["crm", "analytics"] as const).map((tab) => (
+            {(["crm", "analytics", "drafts"] as const).map((tab) => (
               <button
                 key={tab}
                 type="button"
@@ -570,7 +570,7 @@ export function VoiceAgent() {
                 className={`flex-1 px-3 py-3 text-[10px] font-medium uppercase tracking-[0.15em] transition-all duration-300 relative
                   ${intelTab === tab ? "text-gold-light bg-gold/6" : "text-ivory/30"}`}
               >
-                {tab === "crm" ? "CRM" : "Analytics"}
+                {tab === "crm" ? "CRM" : tab === "analytics" ? "Analytics" : "Drafts"}
                 {intelTab === tab && (
                   <div className="absolute bottom-0 left-1/4 right-1/4 h-px bg-gold/40" />
                 )}
@@ -578,7 +578,7 @@ export function VoiceAgent() {
             ))}
           </div>
           <div className="flex-1 overflow-y-auto p-4">
-            {intelTab === "crm" ? <CRMPanel refreshKey={crmRefreshKey} /> : <AnalyticsPanel sessionMetrics={sessionAnalytics} />}
+            {intelTab === "crm" ? <CRMPanel refreshKey={crmRefreshKey} /> : intelTab === "analytics" ? <AnalyticsPanel sessionMetrics={sessionAnalytics} /> : <StagingArea entries={stagingEntries} />}
           </div>
         </div>
       </div>

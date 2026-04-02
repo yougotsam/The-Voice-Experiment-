@@ -40,18 +40,15 @@ function buildEngines(models: ProviderOption[], ttsProviders: ProviderOption[]):
   }
   const xaiTTS = ttsProviders.find((p) => p.id === "xai");
   const grok = models.find((m) => m.id === "xai-grok-3");
-  if (grok) {
-    const tts = xaiTTS || groqTTS || ttsProviders[0];
-    engines.push({ id: "grok-pipeline", label: "Grok", description: `Grok 3 + ${tts?.name || "voice"}`, modelId: grok.id, ttsId: tts?.id });
-  }
   const grokMini = models.find((m) => m.id === "xai-grok-mini");
-  if (grokMini) {
+  const grokBest = grok || grokMini;
+  if (grokBest) {
     const tts = xaiTTS || groqTTS || ttsProviders[0];
-    engines.push({ id: "grok-fast", label: "Grok Fast", description: `Grok Mini + ${tts?.name || "voice"}`, modelId: grokMini.id, ttsId: tts?.id });
+    engines.push({ id: "grok-pipeline", label: "Grok", description: `${grokBest.name} + ${tts?.name || "voice"}`, modelId: grokBest.id, ttsId: tts?.id });
   }
   const grokRealtime = ttsProviders.find((p) => p.id === "grok-realtime");
   if (grokRealtime) {
-    engines.push({ id: "grok-realtime", label: "Realtime", description: "Live speech-to-speech", ttsId: grokRealtime.id, integrated: true });
+    engines.push({ id: "grok-realtime", label: "Grok Realtime", description: "Live speech-to-speech", ttsId: grokRealtime.id, integrated: true });
   }
   const elevenlabs = ttsProviders.find((p) => p.id === "elevenlabs");
   if (groqModel && elevenlabs) {

@@ -95,7 +95,7 @@ class GHLContactSearch(Tool):
             return {"error": "Missing required argument: query"}
         client = _get_client()
         resp = await client.get(
-            f"{GHL_BASE}/contacts/search",
+            f"{GHL_BASE}/contacts/",
             params={"locationId": settings.ghl_location_id, "query": query},
         )
         if resp.status_code != 200:
