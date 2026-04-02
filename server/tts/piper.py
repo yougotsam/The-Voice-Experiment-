@@ -70,8 +70,9 @@ class PiperTTS(TTSProvider):
             model = self._voices[voice_id]
         loop = asyncio.get_running_loop()
         audio = await loop.run_in_executor(None, self._generate_sync, text, model)
-        if audio:
-            yield audio
+        if not audio:
+            raise RuntimeError(f"Piper produced no audio for input text (length={len(text)})")
+        yield audio
 
     def _generate_sync(self, text: str, model: str | None = None) -> bytes:
         model = model or self._model

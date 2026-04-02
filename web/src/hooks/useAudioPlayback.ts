@@ -75,7 +75,8 @@ export function useAudioPlayback() {
     bufferQueue.current = [];
     nextStartTime.current = 0;
     if (contextRef.current && contextRef.current.state !== "closed") {
-      contextRef.current.suspend().catch(() => {});
+      contextRef.current.close().catch(() => {});
+      contextRef.current = null;
     }
   }, []);
 
