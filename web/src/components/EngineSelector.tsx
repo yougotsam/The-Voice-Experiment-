@@ -24,41 +24,44 @@ const API_BASE = process.env.NEXT_PUBLIC_API_URL || "http://localhost:8000";
 
 function buildEngines(models: ProviderOption[], ttsProviders: ProviderOption[]): Engine[] {
   const engines: Engine[] = [];
-  const groqModel = models.find((m) => m.id.startsWith("groq-llama-70b"));
   const groqTTS = ttsProviders.find((p) => p.id === "groq");
-  if (groqModel && groqTTS) {
-    engines.push({ id: "groq-pipeline", label: "Balanced", description: "Llama 70B + Groq voice", modelId: groqModel.id, ttsId: groqTTS.id });
-  }
-  const groq8b = models.find((m) => m.id.startsWith("groq-llama-8b"));
-  if (groq8b && groqTTS) {
-    engines.push({ id: "groq-fast", label: "Fast", description: "Llama 8B + Groq voice", modelId: groq8b.id, ttsId: groqTTS.id });
-  }
-  const gemini = models.find((m) => m.id.startsWith("gemini"));
-  if (gemini) {
-    const tts = groqTTS || ttsProviders[0];
-    engines.push({ id: "gemini-pipeline", label: "Gemini", description: `Gemini Flash + ${tts?.name || "voice"}`, modelId: gemini.id, ttsId: tts?.id });
-  }
   const xaiTTS = ttsProviders.find((p) => p.id === "xai");
+  const elevenlabs = ttsProviders.find((p) => p.id === "elevenlabs");
+  const piperTTS = ttsProviders.find((p) => p.id === "piper");
+  const grokRealtime = ttsProviders.find((p) => p.id === "grok-realtime");
+  const ollamaModel = models.find((m) => m.id.startsWith("ollama-"));
+  const gemini = models.find((m) => m.id.startsWith("gemini"));
+  const groq8b = models.find((m) => m.id.startsWith("groq-llama-8b"));
   const grok = models.find((m) => m.id === "xai-grok-3");
   const grokMini = models.find((m) => m.id === "xai-grok-mini");
   const grokBest = grok || grokMini;
+
+  if (groq8b && groqTTS) {
+    engines.push({ id: "groqs-llama", label: "Groq's Llama", description: "Llama 8B + Groq voice", modelId: groq8b.id, ttsId: groqTTS.id });
+  }
+  if (gemini) {
+    const tts = groqTTS || ttsProviders[0];
+    engines.push({ id: "gemini-live", label: "Gemini Live", description: `Gemini Flash + ${tts?.name || "voice"}`, modelId: gemini.id, ttsId: tts?.id });
+  }
   if (grokBest) {
-    const tts = xaiTTS || groqTTS || ttsProviders[0];
-    engines.push({ id: "grok-pipeline", label: "Grok", description: `${grokBest.name} + ${tts?.name || "voice"}`, modelId: grokBest.id, ttsId: tts?.id });
+    if (grokRealtime) {
+      engines.push({ id: "grok-voice", label: "Grok Voice", description: "Live speech-to-speech", modelId: grokBest.id, ttsId: grokRealtime.id, integrated: true });
+    } else {
+      const tts = xaiTTS || groqTTS || ttsProviders[0];
+      engines.push({ id: "grok-voice", label: "Grok Voice", description: `${grokBest.name} + ${tts?.name || "voice"}`, modelId: grokBest.id, ttsId: tts?.id });
+    }
   }
-  const grokRealtime = ttsProviders.find((p) => p.id === "grok-realtime");
-  if (grokRealtime) {
-    engines.push({ id: "grok-realtime", label: "Grok Realtime", description: "Live speech-to-speech", ttsId: grokRealtime.id, integrated: true });
-  }
-  const elevenlabs = ttsProviders.find((p) => p.id === "elevenlabs");
-  if (groqModel && elevenlabs) {
-    engines.push({ id: "studio", label: "Studio", description: "Llama 70B + ElevenLabs", modelId: groqModel.id, ttsId: elevenlabs.id });
-  }
-  const ollamaModel = models.find((m) => m.id.startsWith("ollama-"));
-  const piperTTS = ttsProviders.find((p) => p.id === "piper");
-  if (ollamaModel && (piperTTS || groqTTS || ttsProviders.length)) {
+  if (ollamaModel) {
     const tts = piperTTS || groqTTS || ttsProviders[0];
-    engines.push({ id: "local", label: "Local", description: `${ollamaModel.name} + ${tts.name}`, modelId: ollamaModel.id, ttsId: tts.id });
+    if (tts) {
+      engines.push({ id: "gemmaverse", label: "GemmaVerse", description: `${ollamaModel.name} + ${tts.name}`, modelId: ollamaModel.id, ttsId: tts.id });
+    }
+  }
+  if (gemini && elevenlabs) {
+    engines.push({ id: "elevenlabs", label: "Eleven Labs", description: "Gemini Flash + ElevenLabs", modelId: gemini.id, ttsId: elevenlabs.id });
+  }
+  if (ollamaModel && piperTTS) {
+    engines.push({ id: "piper", label: "Piper", description: `${ollamaModel.name} + Piper`, modelId: ollamaModel.id, ttsId: piperTTS.id });
   }
   return engines;
 }

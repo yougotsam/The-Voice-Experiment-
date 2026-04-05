@@ -1,3 +1,7 @@
+import os
+import shutil
+from pathlib import Path
+
 from fastapi import APIRouter
 
 from server.config import settings
@@ -16,6 +20,15 @@ TTS_PROVIDERS = [
 ]
 
 
+def _is_piper_available() -> bool:
+    if not shutil.which("piper"):
+        return False
+    models_dir = settings.piper_models_dir
+    if not models_dir or not os.path.isdir(models_dir):
+        return False
+    return any(Path(models_dir).glob("*.onnx"))
+
+
 @router.get("/models")
 async def get_models():
     default_id = ""
@@ -31,8 +44,12 @@ async def get_tts_providers():
     available = []
     for p in TTS_PROVIDERS:
         key_setting = p["key_setting"]
-        if key_setting is None or getattr(settings, key_setting, ""):
-            available.append({"id": p["id"], "name": p["name"]})
+        if key_setting is None:
+            if p["id"] == "piper" and not _is_piper_available():
+                continue
+        elif not getattr(settings, key_setting, ""):
+            continue
+        available.append({"id": p["id"], "name": p["name"]})
 
     default = settings.tts_provider
     if default == "fallback":
