@@ -64,6 +64,9 @@ class GroqTTS(TTSProvider):
             wav_data = response.content
             with io.BytesIO(wav_data) as buf:
                 with wave.open(buf, "rb") as wf:
+                    actual_rate = wf.getframerate()
+                    if actual_rate != self.sample_rate:
+                        logger.warning("Groq returned sample_rate=%d, expected %d — audio may sound distorted", actual_rate, self.sample_rate)
                     pcm_data = wf.readframes(wf.getnframes())
             yield pcm_data
 

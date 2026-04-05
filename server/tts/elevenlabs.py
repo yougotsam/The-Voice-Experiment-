@@ -26,7 +26,6 @@ KNOWN_VOICES = {
 }
 
 WS_TIMEOUT = 15
-RECEIVE_TIMEOUT = 30
 
 
 class ElevenLabsTTS(TTSProvider):
