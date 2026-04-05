@@ -16,6 +16,7 @@ type Engine = {
 type EngineSelectorProps = {
   onModelChange: (modelId: string) => void;
   onTTSChange: (providerId: string) => void;
+  onEngineChange?: (modelId: string | undefined, ttsId: string | undefined) => void;
   onVoiceChange?: (voiceId: string) => void;
   serverConfig?: { model_id: string; tts_provider: string } | null;
 };
@@ -66,7 +67,7 @@ function buildEngines(models: ProviderOption[], ttsProviders: ProviderOption[]):
   return engines;
 }
 
-export function EngineSelector({ onModelChange, onTTSChange, onVoiceChange, serverConfig }: EngineSelectorProps) {
+export function EngineSelector({ onModelChange, onTTSChange, onEngineChange, onVoiceChange, serverConfig }: EngineSelectorProps) {
   const [engines, setEngines] = useState<Engine[]>([]);
   const [activeEngine, setActiveEngine] = useState("");
   const [showAdvanced, setShowAdvanced] = useState(false);
@@ -144,16 +145,16 @@ export function EngineSelector({ onModelChange, onTTSChange, onVoiceChange, serv
       setActiveEngine(engineId);
       const engine = engines.find((e) => e.id === engineId);
       if (!engine) return;
-      if (engine.modelId) {
-        setActiveModel(engine.modelId);
-        onModelChange(engine.modelId);
-      }
-      if (engine.ttsId) {
-        setActiveTTS(engine.ttsId);
-        onTTSChange(engine.ttsId);
+      if (engine.modelId) setActiveModel(engine.modelId);
+      if (engine.ttsId) setActiveTTS(engine.ttsId);
+      if (onEngineChange) {
+        onEngineChange(engine.modelId, engine.ttsId);
+      } else {
+        if (engine.modelId) onModelChange(engine.modelId);
+        if (engine.ttsId) onTTSChange(engine.ttsId);
       }
     },
-    [engines, onModelChange, onTTSChange],
+    [engines, onModelChange, onTTSChange, onEngineChange],
   );
 
   const handleModelOverride = useCallback(
