@@ -8,7 +8,7 @@ import certifi
 import httpx
 
 from server.tts.base import TTSProvider
-from server.tts.errors import raise_for_tts_status
+from server.tts.errors import TTSAuthError, raise_for_tts_status
 from server.tts.retry import retry_post
 
 logger = logging.getLogger(__name__)
@@ -44,6 +44,8 @@ class GroqTTS(TTSProvider):
         return True
 
     async def synthesize(self, text: str, voice_id: str = "") -> AsyncIterator[bytes]:
+        if not self._api_key:
+            raise TTSAuthError(self.provider_name, "API key not configured")
         active_voice = voice_id or self._voice
         if not text or not text.strip():
             return

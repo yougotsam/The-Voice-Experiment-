@@ -304,6 +304,7 @@ async def websocket_endpoint(ws: WebSocket) -> None:
                             try:
                                 new_tts = _create_single_tts(tts_provider_id)
                                 if not new_tts.is_available():
+                                    await new_tts.close()
                                     await send_json("error", {"text": f"TTS provider {tts_provider_id} not available (check API key in .env)"})
                                 else:
                                     if orchestrator:

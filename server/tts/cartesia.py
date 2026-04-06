@@ -6,7 +6,7 @@ import certifi
 import httpx
 
 from server.tts.base import TTSProvider
-from server.tts.errors import raise_for_tts_status
+from server.tts.errors import TTSAuthError, raise_for_tts_status
 from server.tts.retry import retry_post
 
 logger = logging.getLogger(__name__)
@@ -54,6 +54,8 @@ class CartesiaTTS(TTSProvider):
         return True
 
     async def synthesize(self, text: str, voice_id: str = "") -> AsyncIterator[bytes]:
+        if not self._api_key:
+            raise TTSAuthError(self.provider_name, "API key not configured")
         active_voice = voice_id or self._voice_id
         if active_voice not in VOICES:
             active_voice = self._voice_id
