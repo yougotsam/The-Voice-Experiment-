@@ -29,14 +29,17 @@ class PiperTTS(TTSProvider):
     provider_name = "piper"
 
     def __init__(self, models_dir: str = "", default_voice: str = "hal"):
+        self._model: str | None = None
+        self._voice_name: str = default_voice
         self._piper_bin = shutil.which("piper")
-        if not self._piper_bin:
-            raise TTSProviderUnavailableError(
-                self.provider_name,
-                "Piper CLI not found on PATH. "
-                "Install with: pip install piper-tts  (or place the piper binary on PATH)",
-            )
         self._models_dir = models_dir
+        if not self._piper_bin:
+            logger.warning(
+                "Piper CLI not found on PATH. "
+                "Install with: pip install piper-tts  (or place the piper binary on PATH)"
+            )
+            self._voices: dict[str, str] = {}
+            return
         self._voices = _discover_voices(models_dir)
         if self._voices:
             logger.info("Piper voices discovered: %s", list(self._voices.keys()))
@@ -50,12 +53,12 @@ class PiperTTS(TTSProvider):
             self._voice_name = first
             logger.warning("Default voice '%s' not found, using '%s'", default_voice, first)
         else:
-            raise TTSProviderUnavailableError(
-                self.provider_name,
-                f"No Piper voice models found. Set PIPER_MODELS_DIR to a directory "
-                f"containing .onnx voice files (searched: '{models_dir}')",
+            logger.warning(
+                "No Piper voice models found. Set PIPER_MODELS_DIR to a directory "
+                "containing .onnx voice files (searched: '%s')", models_dir,
             )
-        logger.info("Piper TTS ready: voice=%s model=%s bin=%s", self._voice_name, self._model, self._piper_bin)
+        if self._model:
+            logger.info("Piper TTS ready: voice=%s model=%s bin=%s", self._voice_name, self._model, self._piper_bin)
 
     def is_available(self) -> bool:
         return bool(self._piper_bin and self._voices)
@@ -70,6 +73,11 @@ class PiperTTS(TTSProvider):
         return False
 
     async def synthesize(self, text: str, voice_id: str = "") -> AsyncIterator[bytes]:
+        if not self.is_available():
+            raise TTSProviderUnavailableError(
+                self.provider_name,
+                "Piper is not available (missing CLI binary or voice models)",
+            )
         if not text or not text.strip():
             return
         model = self._model
