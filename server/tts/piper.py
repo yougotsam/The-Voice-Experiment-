@@ -32,6 +32,7 @@ class PiperTTS(TTSProvider):
         self._model: str | None = None
         self._voice_name: str = default_voice
         self._piper_bin = shutil.which("piper")
+        self._models_dir = models_dir
         if not self._piper_bin:
             logger.warning(
                 "Piper CLI not found on PATH. "
@@ -39,7 +40,6 @@ class PiperTTS(TTSProvider):
             )
             self._voices: dict[str, str] = {}
             return
-        self._models_dir = models_dir
         self._voices = _discover_voices(models_dir)
         if self._voices:
             logger.info("Piper voices discovered: %s", list(self._voices.keys()))
