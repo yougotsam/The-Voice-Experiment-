@@ -14,7 +14,7 @@ from server.ws.protocol import (
 )
 from server.stt.assemblyai import AssemblyAISTT
 from server.llm.openai_compat import OpenAICompatLLM
-from server.llm.models import get_model, MODEL_REGISTRY, _ollama_reachable_async
+from server.llm.models import get_model, MODEL_REGISTRY, check_ollama_reachable
 from server.tts.elevenlabs import ElevenLabsTTS
 from server.pipeline.orchestrator import Orchestrator
 from server.pipeline.session import ConversationSession
@@ -225,7 +225,7 @@ async def websocket_endpoint(ws: WebSocket) -> None:
                             api_key = getattr(settings, model_cfg.api_key_setting, "")
                             if not api_key:
                                 await send_json("error", {"text": f"API key not configured for {model_cfg.provider}. Add it to your .env file."})
-                            elif model_cfg.provider == "ollama" and not await _ollama_reachable_async(model_cfg.base_url):
+                            elif model_cfg.provider == "ollama" and not await check_ollama_reachable(model_cfg.base_url):
                                 await send_json("error", {"text": "Cannot connect to Ollama. Make sure Ollama is running (ollama serve) and the model is pulled."})
                             else:
                                 llm.set_model(model_cfg.model, model_cfg.base_url, api_key)

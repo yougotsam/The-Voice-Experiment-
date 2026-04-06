@@ -59,6 +59,8 @@ def _classify_llm_error(exc: Exception, exc_name: str, exc_str: str) -> str:
         return "AI model request timed out. Try again or switch to a different model."
     if "NotFoundError" in exc_name or "404" in exc_str:
         return "AI model not found. The model may not be available or not pulled locally."
+    if "RateLimit" in exc_name or "429" in exc_str:
+        return "AI model rate limited. Wait a moment and try again, or switch to a different model."
     return "Response failed. Check server logs for details."
 
 
