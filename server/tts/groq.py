@@ -8,6 +8,8 @@ import certifi
 import httpx
 
 from server.tts.base import TTSProvider
+from server.tts.errors import raise_for_tts_status
+from server.tts.retry import retry_post
 
 logger = logging.getLogger(__name__)
 
@@ -16,6 +18,7 @@ GROQ_TTS_URL = "https://api.groq.com/openai/v1/audio/speech"
 
 class GroqTTS(TTSProvider):
     sample_rate: int = 24000
+    provider_name = "groq"
 
     MAX_INPUT_CHARS = 180
 
@@ -28,6 +31,9 @@ class GroqTTS(TTSProvider):
         logger.info("GroqTTS init: model=%s voice=%s key=%s", model, voice, "SET" if api_key else "MISSING")
 
     KNOWN_VOICES = {"autumn", "diana", "hannah", "troy", "austin", "daniel"}
+
+    def is_available(self) -> bool:
+        return bool(self._api_key)
 
     def set_voice(self, voice: str) -> bool:
         if self.KNOWN_VOICES and voice not in self.KNOWN_VOICES:
@@ -48,7 +54,8 @@ class GroqTTS(TTSProvider):
                 "voice": active_voice,
                 "response_format": "wav",
             }
-            response = await self._client.post(
+            response = await retry_post(
+                self._client,
                 GROQ_TTS_URL,
                 headers={
                     "Authorization": f"Bearer {self._api_key}",
@@ -59,7 +66,7 @@ class GroqTTS(TTSProvider):
             if response.status_code != 200:
                 body = response.text[:500]
                 logger.error("Groq TTS %s: %s", response.status_code, body)
-                raise RuntimeError(f"Groq TTS HTTP {response.status_code}: {body}")
+                raise_for_tts_status(self.provider_name, response.status_code, body)
 
             wav_data = response.content
             with io.BytesIO(wav_data) as buf:

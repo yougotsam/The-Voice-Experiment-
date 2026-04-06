@@ -303,13 +303,16 @@ async def websocket_endpoint(ws: WebSocket) -> None:
                                 logger.info("Exited Grok Realtime mode for session %s", session_id)
                             try:
                                 new_tts = _create_single_tts(tts_provider_id)
-                                if orchestrator:
-                                    await orchestrator.set_tts(new_tts)
-                                tts = new_tts
-                                await send_json(ServerMessageType.TTS_LOADED.value, {
-                                    "provider": tts_provider_id,
-                                })
-                                logger.info("TTS switched to %s for session %s", tts_provider_id, session_id)
+                                if not new_tts.is_available():
+                                    await send_json("error", {"text": f"TTS provider {tts_provider_id} not available (check API key in .env)"})
+                                else:
+                                    if orchestrator:
+                                        await orchestrator.set_tts(new_tts)
+                                    tts = new_tts
+                                    await send_json(ServerMessageType.TTS_LOADED.value, {
+                                        "provider": tts_provider_id,
+                                    })
+                                    logger.info("TTS switched to %s for session %s", tts_provider_id, session_id)
                             except Exception:
                                 logger.exception("Failed to switch TTS to %s", tts_provider_id)
                                 await send_json("error", {"text": f"Failed to load TTS provider: {tts_provider_id}"})

@@ -7,6 +7,7 @@ from pathlib import Path
 from typing import AsyncIterator
 
 from server.tts.base import TTSProvider
+from server.tts.errors import TTSError, TTSProviderUnavailableError
 
 logger = logging.getLogger(__name__)
 
@@ -25,13 +26,15 @@ def _discover_voices(models_dir: str) -> dict[str, str]:
 
 class PiperTTS(TTSProvider):
     sample_rate: int = PIPER_SAMPLE_RATE
+    provider_name = "piper"
 
     def __init__(self, models_dir: str = "", default_voice: str = "hal"):
         self._piper_bin = shutil.which("piper")
         if not self._piper_bin:
-            raise RuntimeError(
+            raise TTSProviderUnavailableError(
+                self.provider_name,
                 "Piper CLI not found on PATH. "
-                "Install with: pip install piper-tts  (or place the piper binary on PATH)"
+                "Install with: pip install piper-tts  (or place the piper binary on PATH)",
             )
         self._models_dir = models_dir
         self._voices = _discover_voices(models_dir)
@@ -47,11 +50,15 @@ class PiperTTS(TTSProvider):
             self._voice_name = first
             logger.warning("Default voice '%s' not found, using '%s'", default_voice, first)
         else:
-            raise RuntimeError(
+            raise TTSProviderUnavailableError(
+                self.provider_name,
                 f"No Piper voice models found. Set PIPER_MODELS_DIR to a directory "
-                f"containing .onnx voice files (searched: '{models_dir}')"
+                f"containing .onnx voice files (searched: '{models_dir}')",
             )
         logger.info("Piper TTS ready: voice=%s model=%s bin=%s", self._voice_name, self._model, self._piper_bin)
+
+    def is_available(self) -> bool:
+        return bool(self._piper_bin and self._voices)
 
     def set_voice(self, voice: str) -> bool:
         if voice in self._voices:
@@ -71,7 +78,7 @@ class PiperTTS(TTSProvider):
         loop = asyncio.get_running_loop()
         audio = await loop.run_in_executor(None, self._generate_sync, text, model)
         if not audio:
-            raise RuntimeError(f"Piper produced no audio for input text (length={len(text)})")
+            raise TTSError(self.provider_name, f"Produced no audio for input text (length={len(text)})")
         yield audio
 
     def _generate_sync(self, text: str, model: str | None = None) -> bytes:

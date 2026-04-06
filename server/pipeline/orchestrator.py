@@ -8,6 +8,7 @@ from typing import Any, Callable, Awaitable
 from server.stt.base import STTProvider
 from server.llm.base import LLMProvider
 from server.tts.base import TTSProvider
+from server.tts.errors import TTSAuthError, TTSError, TTSRateLimitError, TTSTimeoutError
 from server.pipeline.session import ConversationSession
 from server.pipeline.metrics import SessionMetrics
 from server.tools.base import ToolRegistry
@@ -401,7 +402,19 @@ class Orchestrator:
                 await self._send_audio(audio_chunk)
         except asyncio.CancelledError:
             raise
-        except Exception as exc:
+        except TTSAuthError as exc:
+            logger.error("TTS auth failed: %s", exc)
+            await self._send_json("error", {"text": f"Voice provider authentication failed ({exc.provider}). Check API key."})
+        except TTSRateLimitError as exc:
+            logger.warning("TTS rate limited: %s", exc)
+            await self._send_json("error", {"text": f"Voice provider rate limited ({exc.provider}). Try again shortly."})
+        except TTSTimeoutError as exc:
+            logger.error("TTS timed out: %s", exc)
+            await self._send_json("error", {"text": f"Voice synthesis timed out ({exc.provider})."})
+        except TTSError as exc:
+            logger.error("TTS error: %s", exc)
+            await self._send_json("error", {"text": f"Voice synthesis failed ({exc.provider})."})
+        except Exception:
             logger.exception("TTS synthesis failed for: %s", text[:50])
             await self._send_json("error", {"text": "Voice synthesis failed. Check server logs for details."})
         finally:

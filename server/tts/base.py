@@ -5,6 +5,10 @@ from typing import AsyncIterator
 class TTSProvider(ABC):
     sample_rate: int = 24000
     MAX_INPUT_CHARS: int = 2000
+    provider_name: str = "unknown"
+
+    def is_available(self) -> bool:
+        return True
 
     @abstractmethod
     async def synthesize(self, text: str, voice_id: str = "") -> AsyncIterator[bytes]: ...

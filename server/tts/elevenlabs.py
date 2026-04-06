@@ -9,6 +9,7 @@ import certifi
 import websockets
 
 from server.tts.base import TTSProvider
+from server.tts.errors import TTSAuthError, TTSError, TTSRateLimitError, TTSTimeoutError
 
 logger = logging.getLogger(__name__)
 
@@ -26,13 +27,19 @@ KNOWN_VOICES = {
 }
 
 WS_TIMEOUT = 15
+SYNTHESIS_TIMEOUT = 45
 
 
 class ElevenLabsTTS(TTSProvider):
+    provider_name = "elevenlabs"
+
     def __init__(self, api_key: str, voice_id: str):
         self._api_key = api_key
         self._voice_id = voice_id
         logger.info("ElevenLabsTTS init: voice=%s key=%s", voice_id, "SET" if api_key else "MISSING")
+
+    def is_available(self) -> bool:
+        return bool(self._api_key)
 
     def set_voice(self, voice: str) -> bool:
         if KNOWN_VOICES and voice not in KNOWN_VOICES:
@@ -44,7 +51,7 @@ class ElevenLabsTTS(TTSProvider):
 
     async def synthesize(self, text: str, voice_id: str = "") -> AsyncIterator[bytes]:
         if not self._api_key:
-            raise RuntimeError("ElevenLabs API key not configured")
+            raise TTSAuthError(self.provider_name, "API key not configured")
         if not text or not text.strip():
             return
         active_voice = voice_id or self._voice_id
@@ -75,25 +82,33 @@ class ElevenLabsTTS(TTSProvider):
                 await ws.send(json.dumps({"text": ""}))
 
                 chunk_count = 0
-                async for raw in ws:
-                    try:
-                        msg = json.loads(raw)
-                    except json.JSONDecodeError:
-                        logger.warning("ElevenLabs: non-JSON message received")
-                        continue
-                    if msg.get("error"):
-                        logger.error("ElevenLabs API error: %s", msg["error"])
-                        raise RuntimeError(f"ElevenLabs error: {msg['error']}")
-                    audio_b64 = msg.get("audio")
-                    if audio_b64:
-                        chunk_count += 1
-                        yield base64.b64decode(audio_b64)
-                    if msg.get("isFinal"):
-                        break
+                async with asyncio.timeout(SYNTHESIS_TIMEOUT):
+                    async for raw in ws:
+                        try:
+                            msg = json.loads(raw)
+                        except json.JSONDecodeError:
+                            logger.warning("ElevenLabs: non-JSON message received")
+                            continue
+                        if msg.get("error"):
+                            logger.error("ElevenLabs API error: %s", msg["error"])
+                            raise TTSError(self.provider_name, f"API error: {msg['error']}")
+                        audio_b64 = msg.get("audio")
+                        if audio_b64:
+                            chunk_count += 1
+                            yield base64.b64decode(audio_b64)
+                        if msg.get("isFinal"):
+                            break
                 logger.info("ElevenLabs TTS: sent %d audio chunks", chunk_count)
         except websockets.exceptions.InvalidStatusCode as exc:
             logger.error("ElevenLabs WS rejected: HTTP %s", exc.status_code)
-            raise RuntimeError(f"ElevenLabs rejected connection (HTTP {exc.status_code}) — check your API key")
+            if exc.status_code in (401, 403):
+                raise TTSAuthError(self.provider_name, f"HTTP {exc.status_code} — check your API key")
+            if exc.status_code == 429:
+                raise TTSRateLimitError(self.provider_name, f"HTTP {exc.status_code} — rate limited")
+            raise TTSError(self.provider_name, f"HTTP {exc.status_code}")
+        except TimeoutError:
+            logger.error("ElevenLabs synthesis timed out after %ds", SYNTHESIS_TIMEOUT)
+            raise TTSTimeoutError(self.provider_name, f"Synthesis timed out after {SYNTHESIS_TIMEOUT}s")
         except (OSError, asyncio.TimeoutError) as exc:
             logger.error("ElevenLabs connection failed: %s", exc)
-            raise RuntimeError(f"ElevenLabs connection failed: {exc}")
+            raise TTSTimeoutError(self.provider_name, f"Connection failed: {exc}")
