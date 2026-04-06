@@ -14,7 +14,7 @@ from server.ws.protocol import (
 )
 from server.stt.assemblyai import AssemblyAISTT
 from server.llm.openai_compat import OpenAICompatLLM
-from server.llm.models import get_model, MODEL_REGISTRY
+from server.llm.models import get_model, MODEL_REGISTRY, _ollama_reachable
 from server.tts.elevenlabs import ElevenLabsTTS
 from server.pipeline.orchestrator import Orchestrator
 from server.pipeline.session import ConversationSession
@@ -223,7 +223,11 @@ async def websocket_endpoint(ws: WebSocket) -> None:
                             await send_json("error", {"text": f"Unknown model: {model_id}"})
                         else:
                             api_key = getattr(settings, model_cfg.api_key_setting, "")
-                            if api_key:
+                            if not api_key:
+                                await send_json("error", {"text": f"API key not configured for {model_cfg.provider}. Add it to your .env file."})
+                            elif model_cfg.provider == "ollama" and not _ollama_reachable(model_cfg.base_url):
+                                await send_json("error", {"text": "Cannot connect to Ollama. Make sure Ollama is running (ollama serve) and the model is pulled."})
+                            else:
                                 llm.set_model(model_cfg.model, model_cfg.base_url, api_key)
                                 session_metrics.record_model(model_cfg.id)
                                 await send_json(ServerMessageType.MODEL_LOADED.value, {
@@ -231,8 +235,6 @@ async def websocket_endpoint(ws: WebSocket) -> None:
                                     "name": model_cfg.name,
                                 })
                                 logger.info("Model switched to %s for session %s", model_cfg.id, session_id)
-                            else:
-                                await send_json("error", {"text": f"API key not configured for {model_cfg.provider}"})
 
                     if tts_provider_id:
                         if tts_provider_id == "grok-realtime":

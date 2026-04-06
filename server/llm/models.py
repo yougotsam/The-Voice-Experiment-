@@ -1,8 +1,13 @@
 from __future__ import annotations
 
+import logging
 from dataclasses import dataclass
 
+import httpx
+
 from server.config import settings
+
+logger = logging.getLogger(__name__)
 
 
 @dataclass(frozen=True)
@@ -84,6 +89,19 @@ def list_available_models() -> list[dict[str, str]]:
     results = []
     for m in MODEL_REGISTRY.values():
         key = getattr(settings, m.api_key_setting, "")
-        if key:
-            results.append({"id": m.id, "name": m.name, "provider": m.provider})
+        if not key:
+            continue
+        if m.provider == "ollama" and not _ollama_reachable(m.base_url):
+            continue
+        results.append({"id": m.id, "name": m.name, "provider": m.provider})
     return results
+
+
+def _ollama_reachable(base_url: str) -> bool:
+    health_url = base_url.replace("/v1", "")
+    try:
+        resp = httpx.get(health_url, timeout=2.0)
+        return resp.status_code == 200
+    except Exception:
+        logger.debug("Ollama not reachable at %s", health_url)
+        return False

@@ -45,6 +45,23 @@ NO_TOOLS_NOTICE = (
 )
 
 
+def _classify_llm_error(exc: Exception, exc_name: str, exc_str: str) -> str:
+    exc_lower = exc_str.lower()
+    if "AuthenticationError" in exc_name or "401" in exc_str:
+        return "AI model authentication failed. Check your API key in .env."
+    if "PermissionDenied" in exc_name or "403" in exc_str:
+        return "AI model access denied. Your API key may lack permissions for this model."
+    if any(s in exc_name for s in ("ConnectError", "ConnectionRefused", "ConnectionError")):
+        if "localhost" in exc_lower or "11434" in exc_lower:
+            return "Cannot connect to Ollama. Make sure Ollama is running (ollama serve) and the model is pulled."
+        return "Cannot connect to the AI model provider. Check your internet connection."
+    if "TimeoutException" in exc_name or "Timeout" in exc_name:
+        return "AI model request timed out. Try again or switch to a different model."
+    if "NotFoundError" in exc_name or "404" in exc_str:
+        return "AI model not found. The model may not be available or not pulled locally."
+    return "Response failed. Check server logs for details."
+
+
 class Orchestrator:
     def __init__(
         self,
@@ -170,7 +187,8 @@ class Orchestrator:
             logger.info("Response cancelled (interrupted)")
         except Exception as exc:
             exc_name = type(exc).__name__
-            is_rate_limit = "RateLimit" in exc_name or "429" in str(exc)
+            exc_str = str(exc)
+            is_rate_limit = "RateLimit" in exc_name or "429" in exc_str
             if is_rate_limit and self._try_llm_fallback():
                 logger.info("Retrying with fallback LLM after rate limit")
                 await self._send_json("status", {"text": "Switching to backup model..."})
@@ -181,8 +199,9 @@ class Orchestrator:
                     logger.exception("Fallback LLM also failed")
                 finally:
                     self._restore_primary_llm()
+            error_msg = _classify_llm_error(exc, exc_name, exc_str)
             logger.exception("Response pipeline failed")
-            await self._send_json("error", {"text": "Response failed. Check server logs for details."})
+            await self._send_json("error", {"text": error_msg})
             await self._send_status("idle")
 
     async def process_text_input(self, text: str) -> None:
