@@ -90,6 +90,7 @@ class XaiRealtimeSession:
         session_cfg: dict[str, Any] = {
             "voice": self._voice,
             "instructions": self._instructions,
+            "language": "en",
             "turn_detection": {
                 "type": "server_vad",
                 "threshold": 0.6,
