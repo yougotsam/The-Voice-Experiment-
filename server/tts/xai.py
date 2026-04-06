@@ -6,6 +6,8 @@ import certifi
 import httpx
 
 from server.tts.base import TTSProvider
+from server.tts.errors import TTSAuthError, raise_for_tts_status
+from server.tts.retry import retry_post
 
 logger = logging.getLogger(__name__)
 
@@ -16,6 +18,7 @@ VOICES = {"eve", "ara", "rex", "sal", "leo"}
 
 class XaiTTS(TTSProvider):
     sample_rate: int = 24000
+    provider_name = "xai"
 
     MAX_INPUT_CHARS = 4000
 
@@ -25,6 +28,9 @@ class XaiTTS(TTSProvider):
         ssl_ctx = ssl.create_default_context(cafile=certifi.where())
         self._client = httpx.AsyncClient(timeout=30.0, verify=ssl_ctx)
         logger.info("XaiTTS init: voice=%s key=%s", self._voice, "SET" if api_key else "MISSING")
+
+    def is_available(self) -> bool:
+        return bool(self._api_key)
 
     def set_voice(self, voice: str) -> bool:
         if voice not in VOICES:
@@ -36,7 +42,7 @@ class XaiTTS(TTSProvider):
 
     async def synthesize(self, text: str, voice_id: str = "") -> AsyncIterator[bytes]:
         if not self._api_key:
-            raise RuntimeError("xAI API key not configured")
+            raise TTSAuthError(self.provider_name, "API key not configured")
         active_voice = voice_id or self._voice
         if active_voice not in VOICES:
             active_voice = self._voice
@@ -52,7 +58,8 @@ class XaiTTS(TTSProvider):
                     "sample_rate": self.sample_rate,
                 },
             }
-            response = await self._client.post(
+            response = await retry_post(
+                self._client,
                 XAI_TTS_URL,
                 headers={
                     "Authorization": f"Bearer {self._api_key}",
@@ -63,7 +70,7 @@ class XaiTTS(TTSProvider):
             if response.status_code != 200:
                 body = response.text[:500]
                 logger.error("xAI TTS %s: %s", response.status_code, body)
-                raise RuntimeError(f"xAI TTS HTTP {response.status_code}: {body}")
+                raise_for_tts_status(self.provider_name, response.status_code, body)
 
             yield response.content
 

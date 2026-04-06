@@ -6,6 +6,8 @@ import certifi
 import httpx
 
 from server.tts.base import TTSProvider
+from server.tts.errors import TTSAuthError, raise_for_tts_status
+from server.tts.retry import retry_post
 
 logger = logging.getLogger(__name__)
 
@@ -27,6 +29,7 @@ VOICES = {
 
 class DeepgramTTS(TTSProvider):
     sample_rate: int = 24000
+    provider_name = "deepgram"
 
     MAX_INPUT_CHARS = 2000
 
@@ -36,6 +39,9 @@ class DeepgramTTS(TTSProvider):
         ssl_ctx = ssl.create_default_context(cafile=certifi.where())
         self._client = httpx.AsyncClient(timeout=30.0, verify=ssl_ctx)
         logger.info("DeepgramTTS init: voice=%s key=%s", self._voice, "SET" if api_key else "MISSING")
+
+    def is_available(self) -> bool:
+        return bool(self._api_key)
 
     def set_voice(self, voice: str) -> bool:
         if voice not in VOICES:
@@ -47,14 +53,15 @@ class DeepgramTTS(TTSProvider):
 
     async def synthesize(self, text: str, voice_id: str = "") -> AsyncIterator[bytes]:
         if not self._api_key:
-            raise RuntimeError("Deepgram API key not configured")
+            raise TTSAuthError(self.provider_name, "API key not configured")
         active_voice = voice_id or self._voice
         if active_voice not in VOICES:
             active_voice = self._voice
         if not text or not text.strip():
             return
         for chunk in self._split_text(text):
-            response = await self._client.post(
+            response = await retry_post(
+                self._client,
                 DEEPGRAM_TTS_URL,
                 params={
                     "model": active_voice,
@@ -71,7 +78,7 @@ class DeepgramTTS(TTSProvider):
             if response.status_code != 200:
                 body = response.text[:500]
                 logger.error("Deepgram TTS %s: %s", response.status_code, body)
-                raise RuntimeError(f"Deepgram TTS HTTP {response.status_code}: {body}")
+                raise_for_tts_status(self.provider_name, response.status_code, body)
 
             yield response.content
 
