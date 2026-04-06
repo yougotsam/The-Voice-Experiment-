@@ -57,7 +57,8 @@ class PiperTTS(TTSProvider):
                 "No Piper voice models found. Set PIPER_MODELS_DIR to a directory "
                 "containing .onnx voice files (searched: '%s')", models_dir,
             )
-        logger.info("Piper TTS ready: voice=%s model=%s bin=%s", self._voice_name, self._model, self._piper_bin)
+        if self._model:
+            logger.info("Piper TTS ready: voice=%s model=%s bin=%s", self._voice_name, self._model, self._piper_bin)
 
     def is_available(self) -> bool:
         return bool(self._piper_bin and self._voices)

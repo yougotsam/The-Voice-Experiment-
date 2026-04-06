@@ -36,6 +36,7 @@ class XaiRealtimeSession:
         voice: str = "Eve",
         instructions: str = "You are a helpful voice assistant.",
         sample_rate: int = 24000,
+        language: str = "en",
         tools: list[dict] | None = None,
         tool_executor: Callable[[str, dict], Awaitable[dict]] | None = None,
     ):
@@ -43,6 +44,7 @@ class XaiRealtimeSession:
         self._voice = voice if voice in REALTIME_VOICES else "Eve"
         self._instructions = instructions
         self._sample_rate = sample_rate
+        self._language = language
         self._tools = _convert_tool_schemas(tools) if tools else []
         self._tool_executor = tool_executor
         self._ws: ClientConnection | None = None
@@ -90,7 +92,7 @@ class XaiRealtimeSession:
         session_cfg: dict[str, Any] = {
             "voice": self._voice,
             "instructions": self._instructions,
-            "language": "en",
+            "language": self._language,
             "turn_detection": {
                 "type": "server_vad",
                 "threshold": 0.6,
