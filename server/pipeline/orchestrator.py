@@ -55,7 +55,7 @@ def _classify_llm_error(exc: Exception, exc_name: str, exc_str: str) -> str:
         if "localhost" in exc_lower or "11434" in exc_lower:
             return "Cannot connect to Ollama. Make sure Ollama is running (ollama serve) and the model is pulled."
         return "Cannot connect to the AI model provider. Check your internet connection."
-    if "TimeoutException" in exc_name or "Timeout" in exc_name:
+    if "TimeoutException" in exc_name or "Timeout" in exc_name or "timeout" in exc_lower:
         return "AI model request timed out. Try again or switch to a different model."
     if "NotFoundError" in exc_name or "404" in exc_str:
         return "AI model not found. The model may not be available or not pulled locally."
