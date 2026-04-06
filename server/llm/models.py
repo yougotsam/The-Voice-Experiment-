@@ -85,13 +85,13 @@ def get_model(model_id: str) -> ModelConfig | None:
     return MODEL_REGISTRY.get(model_id)
 
 
-def list_available_models() -> list[dict[str, str]]:
+async def list_available_models() -> list[dict[str, str]]:
     results = []
     for m in MODEL_REGISTRY.values():
         key = getattr(settings, m.api_key_setting, "")
         if not key:
             continue
-        if m.provider == "ollama" and not _ollama_reachable(m.base_url):
+        if m.provider == "ollama" and not await _ollama_reachable_async(m.base_url):
             continue
         results.append({"id": m.id, "name": m.name, "provider": m.provider})
     return results
@@ -102,6 +102,17 @@ def _ollama_reachable(base_url: str) -> bool:
     try:
         resp = httpx.get(health_url, timeout=2.0)
         return resp.status_code == 200
+    except Exception:
+        logger.debug("Ollama not reachable at %s", health_url)
+        return False
+
+
+async def _ollama_reachable_async(base_url: str) -> bool:
+    health_url = base_url.replace("/v1", "")
+    try:
+        async with httpx.AsyncClient(timeout=2.0) as client:
+            resp = await client.get(health_url)
+            return resp.status_code == 200
     except Exception:
         logger.debug("Ollama not reachable at %s", health_url)
         return False

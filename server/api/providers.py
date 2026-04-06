@@ -36,7 +36,7 @@ async def get_models():
         if m.model == settings.llm_model and m.base_url == settings.llm_base_url:
             default_id = m.id
             break
-    return {"models": list_available_models(), "default": default_id}
+    return {"models": await list_available_models(), "default": default_id}
 
 
 @router.get("/tts")
