@@ -82,22 +82,26 @@ class ElevenLabsTTS(TTSProvider):
                 await ws.send(json.dumps({"text": ""}))
 
                 chunk_count = 0
-                async with asyncio.timeout(SYNTHESIS_TIMEOUT):
-                    async for raw in ws:
-                        try:
-                            msg = json.loads(raw)
-                        except json.JSONDecodeError:
-                            logger.warning("ElevenLabs: non-JSON message received")
-                            continue
-                        if msg.get("error"):
-                            logger.error("ElevenLabs API error: %s", msg["error"])
-                            raise TTSError(self.provider_name, f"API error: {msg['error']}")
-                        audio_b64 = msg.get("audio")
-                        if audio_b64:
-                            chunk_count += 1
-                            yield base64.b64decode(audio_b64)
-                        if msg.get("isFinal"):
-                            break
+                try:
+                    async with asyncio.timeout(SYNTHESIS_TIMEOUT):
+                        async for raw in ws:
+                            try:
+                                msg = json.loads(raw)
+                            except json.JSONDecodeError:
+                                logger.warning("ElevenLabs: non-JSON message received")
+                                continue
+                            if msg.get("error"):
+                                logger.error("ElevenLabs API error: %s", msg["error"])
+                                raise TTSError(self.provider_name, f"API error: {msg['error']}")
+                            audio_b64 = msg.get("audio")
+                            if audio_b64:
+                                chunk_count += 1
+                                yield base64.b64decode(audio_b64)
+                            if msg.get("isFinal"):
+                                break
+                except TimeoutError:
+                    logger.error("ElevenLabs synthesis timed out after %ds", SYNTHESIS_TIMEOUT)
+                    raise TTSTimeoutError(self.provider_name, f"Synthesis timed out after {SYNTHESIS_TIMEOUT}s")
                 logger.info("ElevenLabs TTS: sent %d audio chunks", chunk_count)
         except websockets.exceptions.InvalidStatusCode as exc:
             logger.error("ElevenLabs WS rejected: HTTP %s", exc.status_code)
@@ -106,9 +110,6 @@ class ElevenLabsTTS(TTSProvider):
             if exc.status_code == 429:
                 raise TTSRateLimitError(self.provider_name, f"HTTP {exc.status_code} — rate limited")
             raise TTSError(self.provider_name, f"HTTP {exc.status_code}")
-        except TimeoutError:
-            logger.error("ElevenLabs synthesis timed out after %ds", SYNTHESIS_TIMEOUT)
-            raise TTSTimeoutError(self.provider_name, f"Synthesis timed out after {SYNTHESIS_TIMEOUT}s")
         except (OSError, asyncio.TimeoutError) as exc:
             logger.error("ElevenLabs connection failed: %s", exc)
             raise TTSTimeoutError(self.provider_name, f"Connection failed: {exc}")
