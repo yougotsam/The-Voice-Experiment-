@@ -38,7 +38,12 @@ class ConversationSession:
             self._memory_summary = await memory.get_summary(self.user_id)
             prior = await memory.load_history(self.user_id)
             if prior:
-                logger.info("Restored %d messages from memory for %s", len(prior), self.user_id)
+                restorable = [
+                    m for m in prior
+                    if m.get("role") in ("user", "assistant") and m.get("content")
+                ]
+                self.history = restorable[-self.MAX_STORED_HISTORY:]
+                logger.info("Restored %d messages from memory for %s", len(self.history), self.user_id)
         except Exception:
             logger.warning("Memory restore failed", exc_info=True)
 

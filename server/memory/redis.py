@@ -95,4 +95,4 @@ class RedisMemory:
         try:
             await self._redis.delete(self._key(user_id))
         except Exception:
-            pass
+            logger.warning("Failed to clear memory for %s", user_id, exc_info=True)
