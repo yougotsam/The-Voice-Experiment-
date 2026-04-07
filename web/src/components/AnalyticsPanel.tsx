@@ -39,11 +39,11 @@ const API_BASE = process.env.NEXT_PUBLIC_API_URL || "http://localhost:8000";
 
 function StatCard({ label, value, unit, color }: { label: string; value: string | number; unit?: string; color?: string }) {
   return (
-    <div className="flex flex-col items-center gap-1 rounded-xl px-4 py-3 min-w-[100px] bg-slate-navy/50 border border-accent-default/10">
-      <span className="text-[9px] uppercase tracking-widest text-text-tertiary">
+    <div className="flex flex-col items-center gap-1 rounded-xl px-4 py-3 min-w-[100px] card-elevated">
+      <span className="text-[9px] uppercase tracking-widest text-text-tertiary" style={{ fontWeight: 510 }}>
         {label}
       </span>
-      <span className="text-lg font-semibold" style={{ color: color || "var(--color-accent-bright)" }}>
+      <span className="text-lg font-semibold" style={{ color: color || "var(--color-accent-bright)", fontFeatureSettings: '"tnum"' }}>
         {value}
         {unit && <span className="text-[10px] ml-0.5 font-normal text-text-tertiary">{unit}</span>}
       </span>
@@ -256,13 +256,17 @@ export function AnalyticsPanel({ sessionMetrics }: AnalyticsPanelProps) {
           <button
             key={v.id}
             onClick={() => setView(v.id)}
-            className={`rounded-full px-3.5 py-1 text-[10px] font-medium tracking-wide transition-all duration-300 border ${
+            className={`px-3.5 py-1 text-[10px] tracking-wide transition-all duration-300 relative ${
               view === v.id
-                ? "text-accent-bright bg-accent-default/12 border-accent-default/30"
-                : "text-text-tertiary bg-transparent border-accent-default/8"
+                ? "text-accent-bright"
+                : "text-text-tertiary hover:text-text-secondary"
             }`}
+            style={{ fontWeight: 510 }}
           >
             {v.label}
+            {view === v.id && (
+              <div className="absolute bottom-0 left-2 right-2 h-[2px] rounded-full bg-accent-default/60" />
+            )}
           </button>
         ))}
       </div>

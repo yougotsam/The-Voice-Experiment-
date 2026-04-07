@@ -47,7 +47,7 @@ export function StagingArea({ entries }: StagingAreaProps) {
       {entries.map((entry) => (
         <div
           key={entry.id}
-          className="rounded-xl p-4 bg-surface-1 border border-accent-default/8"
+          className="rounded-xl p-4 bg-surface-1 border border-white/[0.06]"
         >
           <div className="flex items-center justify-between mb-2">
             <span className="text-[10px] font-medium uppercase tracking-wider text-accent-muted">
