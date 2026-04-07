@@ -88,8 +88,6 @@ Models are switchable at runtime via WebSocket `config` messages. The `OpenAICom
 | `groq` | Cloud API | Uses same Groq API key as LLM. Orpheus voices. Default. |
 | `xai` | Cloud API | xAI TTS. 5 voices (Eve, Ara, Rex, Sal, Leo). |
 | `elevenlabs` | Cloud WebSocket | High quality streaming. 8 curated voices. Paid. |
-| `deepgram` | Cloud API | Aura-2 voices. Sub-200ms latency. 10 voices. |
-| `cartesia` | Cloud API | Sonic model. Expressive character voices. 10 voices. |
 | `grok-realtime` | Cloud WebSocket | Speech-to-speech via xAI. Full-duplex. |
 | `fallback` | Chain | Tries providers in configured order. |
 
@@ -157,7 +155,7 @@ All settings are in `.env` (loaded by pydantic-settings). See `.env.example` for
 
 **Required:** `ASSEMBLYAI_API_KEY`, `LLM_API_KEY`
 
-**Optional:** `GEMINI_API_KEY`, `XAI_API_KEY`, `ELEVENLABS_API_KEY`, `DEEPGRAM_API_KEY`, `CARTESIA_API_KEY`, `GHL_API_KEY`, `GHL_LOCATION_ID`
+**Optional:** `GEMINI_API_KEY`, `XAI_API_KEY`, `ELEVENLABS_API_KEY`, `GHL_API_KEY`, `GHL_LOCATION_ID`
 
 ## Running
 

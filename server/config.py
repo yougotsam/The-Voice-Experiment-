@@ -13,10 +13,6 @@ class Settings(BaseSettings):
     xai_tts_voice: str = "eve"
     tts_provider: str = "fallback"
     tts_fallback_chain: str = "groq,xai,elevenlabs"
-    deepgram_api_key: str = ""
-    deepgram_tts_voice: str = "aura-2-thalia-en"
-    cartesia_api_key: str = ""
-    cartesia_voice_id: str = "79a125e8-cd45-4c13-8a67-188112f4dd22"
     host: str = "0.0.0.0"
     port: int = 8000
     gemini_api_key: str = ""
