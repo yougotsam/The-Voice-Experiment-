@@ -89,6 +89,7 @@ async def websocket_endpoint(ws: WebSocket) -> None:
     orchestrator: Orchestrator | None = None
     realtime_session = None
     ping_task: asyncio.Task | None = None
+    session: ConversationSession | None = None
     try:
         session = ConversationSession(session_id)
         await session.restore_from_memory(memory)
