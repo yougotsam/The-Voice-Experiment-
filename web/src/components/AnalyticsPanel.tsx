@@ -39,10 +39,7 @@ const API_BASE = process.env.NEXT_PUBLIC_API_URL || "http://localhost:8000";
 
 function StatCard({ label, value, unit, color }: { label: string; value: string | number; unit?: string; color?: string }) {
   return (
-    <div
-      className="flex flex-col items-center gap-1 rounded-xl px-4 py-3 min-w-[100px] bg-surface-1 border border-white/[0.06]"
-      style={{ boxShadow: "0 1px 2px rgba(0,0,0,0.3), 0 4px 12px rgba(0,0,0,0.15), inset 0 1px 0 rgba(255,255,255,0.04)" }}
-    >
+    <div className="flex flex-col items-center gap-1 rounded-xl px-4 py-3 min-w-[100px] card-elevated">
       <span className="text-[9px] uppercase tracking-widest text-text-tertiary" style={{ fontWeight: 510 }}>
         {label}
       </span>
