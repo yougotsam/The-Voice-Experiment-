@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useRef, useState, useEffect, useMemo } from "react";
+import { useCallback, useRef, useState, useEffect, useMemo, memo } from "react";
 import { useWebSocket, ServerMessage } from "@/hooks/useWebSocket";
 import { useMicrophone } from "@/hooks/useMicrophone";
 import { useAudioPlayback } from "@/hooks/useAudioPlayback";
@@ -42,6 +42,8 @@ export function VoiceAgent() {
   const [crmRefreshKey, setCrmRefreshKey] = useState(0);
   const [serverConfig, setServerConfig] = useState<{ model_id: string; tts_provider: string } | null>(null);
   const [errorToast, setErrorToast] = useState<string | null>(null);
+  const [sessionStart] = useState(Date.now());
+  const [sessionTimer, setSessionTimer] = useState("00:00");
   const errorTimer = useRef<ReturnType<typeof setTimeout> | undefined>(undefined);
   const agentTextBuffer = useRef("");
   const lastSpeakingEnd = useRef(0);
@@ -80,6 +82,16 @@ export function VoiceAgent() {
   useEffect(() => {
     return () => clearTimeout(stuckTimer.current);
   }, []);
+
+  useEffect(() => {
+    const tick = setInterval(() => {
+      const s = Math.floor((Date.now() - sessionStart) / 1000);
+      const m = Math.floor(s / 60);
+      const sec = s % 60;
+      setSessionTimer(`${String(m).padStart(2, "0")}:${String(sec).padStart(2, "0")}`);
+    }, 1000);
+    return () => clearInterval(tick);
+  }, [sessionStart]);
 
   const { enqueue: enqueueAudio, stop: stopPlayback, setSampleRate } = useAudioPlayback();
   stopPlaybackRef.current = stopPlayback;
@@ -472,6 +484,38 @@ export function VoiceAgent() {
         </div>
       </header>
 
+      <div className="status-bar flex items-center gap-4 px-5 py-1.5 shrink-0 text-text-tertiary">
+        <div className="flex items-center gap-1.5">
+          <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" className="text-text-muted">
+            <circle cx="12" cy="12" r="10" /><polyline points="12 6 12 12 16 14" />
+          </svg>
+          <span className="font-mono">{sessionTimer}</span>
+        </div>
+        <div className="h-2.5 w-px bg-white/[0.06]" />
+        <div className="flex items-center gap-1.5">
+          <span className="text-text-muted">Model</span>
+          <span className="text-text-secondary">{serverConfig?.model_id?.replace(/-/g, " ").replace(/\b\w/g, c => c.toUpperCase()) || "—"}</span>
+        </div>
+        <div className="h-2.5 w-px bg-white/[0.06]" />
+        <div className="flex items-center gap-1.5">
+          <span className="text-text-muted">TTS</span>
+          <span className="text-text-secondary">{serverConfig?.tts_provider?.replace(/-/g, " ").replace(/\b\w/g, c => c.toUpperCase()) || "—"}</span>
+        </div>
+        {metrics && (
+          <>
+            <div className="h-2.5 w-px bg-white/[0.06]" />
+            <div className="flex items-center gap-1.5">
+              <span className="text-text-muted">Latency</span>
+              <span className={`font-mono ${(metrics.total_ms ?? 0) < 600 ? "text-emerald-400/70" : (metrics.total_ms ?? 0) < 1200 ? "text-accent-bright" : "text-red-400/70"}`}>
+                {metrics.total_ms ?? 0}ms
+              </span>
+            </div>
+          </>
+        )}
+        <div className="flex-1" />
+        <span className="hidden sm:inline text-text-muted">{entries.length} messages</span>
+      </div>
+
       {errorToast && (
         <div
           className="mx-4 mt-2 px-4 py-2.5 rounded-xl text-sm flex items-center justify-between
@@ -587,6 +631,9 @@ export function VoiceAgent() {
                 style={{ fontWeight: 510 }}
               >
                 {tab === "crm" ? "CRM" : tab === "analytics" ? "Analytics" : "Drafts"}
+                {tab === "drafts" && stagingEntries.length > 0 && (
+                  <span className="count-badge ml-1.5">{stagingEntries.length}</span>
+                )}
                 {intelTab === tab && (
                   <div className="absolute bottom-0 left-3 right-3 h-[2px] rounded-full bg-gold/60" />
                 )}

@@ -92,10 +92,10 @@ export function CRMPanel({ refreshKey = 0 }: CRMPanelProps) {
     fetchData("contacts");
   };
 
-  const viewButtons: { id: CRMView; label: string }[] = [
-    { id: "contacts", label: "Contacts" },
-    { id: "pipeline", label: "Pipeline" },
-    { id: "conversations", label: "Messages" },
+  const viewButtons: { id: CRMView; label: string; count: number }[] = [
+    { id: "contacts", label: "Contacts", count: contacts.length },
+    { id: "pipeline", label: "Pipeline", count: opportunities.length },
+    { id: "conversations", label: "Messages", count: conversations.length },
   ];
 
   return (
@@ -114,6 +114,7 @@ export function CRMPanel({ refreshKey = 0 }: CRMPanelProps) {
             style={{ fontWeight: 510 }}
           >
             {btn.label}
+            {btn.count > 0 && <span className="count-badge ml-1">{btn.count}</span>}
             {view === btn.id && (
               <div className="absolute bottom-0 left-2 right-2 h-[2px] rounded-full bg-accent-default/60" />
             )}
@@ -125,7 +126,9 @@ export function CRMPanel({ refreshKey = 0 }: CRMPanelProps) {
           className="ml-auto px-2 py-1.5 rounded-lg text-[10px] uppercase tracking-wider transition-all duration-200 hover:bg-white/5 text-text-tertiary"
           aria-label="Refresh"
         >
-          {loading ? "..." : "↻"}
+          <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" className={loading ? "animate-spin" : ""}>
+            <polyline points="23 4 23 10 17 10" /><path d="M20.49 15a9 9 0 1 1-2.12-9.36L23 10" />
+          </svg>
         </button>
       </div>
 
@@ -154,10 +157,16 @@ export function CRMPanel({ refreshKey = 0 }: CRMPanelProps) {
       )}
 
       {loading && !error && (
-        <div className="flex items-center justify-center py-8">
-          <p className="text-[11px] uppercase tracking-widest text-text-muted">
-            Loading...
-          </p>
+        <div className="space-y-2">
+          {[1, 2, 3].map((i) => (
+            <div key={i} className="rounded-lg px-3 py-3 flex items-center gap-3 bg-surface-1 border border-white/[0.04]">
+              <div className="skeleton h-8 w-8 rounded-full shrink-0" />
+              <div className="flex-1 space-y-1.5">
+                <div className="skeleton h-3 w-24" />
+                <div className="skeleton h-2.5 w-36" />
+              </div>
+            </div>
+          ))}
         </div>
       )}
 
@@ -178,7 +187,7 @@ function ContactsList({ contacts }: { contacts: Contact[] }) {
       {contacts.map((c) => (
         <div
           key={c.id}
-          className="rounded-lg px-3 py-2.5 flex items-center gap-3 bg-surface-1 border border-white/[0.06]"
+          className="card-interactive px-3 py-2.5 flex items-center gap-3"
         >
           <div className="h-8 w-8 rounded-full flex items-center justify-center shrink-0 text-[11px] font-semibold uppercase bg-accent-default/10 text-accent-default/70">
             {c.name.charAt(0) || "?"}
@@ -237,7 +246,7 @@ function PipelineView({ opportunities }: { opportunities: Opportunity[] }) {
             {opps.map((opp) => (
               <div
                 key={opp.id}
-                className="rounded-lg px-3 py-2 flex items-center justify-between bg-surface-1 border border-white/[0.06]"
+                className="card-interactive px-3 py-2 flex items-center justify-between"
               >
                 <div className="min-w-0 flex-1">
                   <p className="text-xs font-medium truncate text-text-primary/80">
@@ -256,12 +265,15 @@ function PipelineView({ opportunities }: { opportunities: Opportunity[] }) {
                     </span>
                   )}
                   <span
-                    className="px-1.5 py-0.5 rounded text-[9px] uppercase tracking-wider"
+                    className="px-1.5 py-0.5 rounded text-[9px] uppercase tracking-wider border"
                     style={{
-                      background: opp.status === "won" ? "rgba(80, 180, 80, 0.12)" :
+                      background: opp.status === "won" ? "rgba(21, 190, 83, 0.12)" :
                                   opp.status === "lost" ? "rgba(220, 80, 80, 0.12)" :
                                   "rgba(200, 169, 126, 0.08)",
-                      color: opp.status === "won" ? "rgba(80, 180, 80, 0.8)" :
+                      borderColor: opp.status === "won" ? "rgba(21, 190, 83, 0.25)" :
+                                   opp.status === "lost" ? "rgba(220, 80, 80, 0.25)" :
+                                   "rgba(200, 169, 126, 0.15)",
+                      color: opp.status === "won" ? "rgba(21, 190, 83, 0.8)" :
                              opp.status === "lost" ? "rgba(220, 80, 80, 0.8)" :
                              "var(--color-accent-muted)",
                     }}
@@ -288,7 +300,7 @@ function ConversationsList({ conversations }: { conversations: Conversation[] })
       {conversations.map((conv) => (
         <div
           key={conv.id}
-          className="rounded-lg px-3 py-2.5 flex items-center gap-3 bg-surface-1 border border-white/[0.06]"
+          className="card-interactive px-3 py-2.5 flex items-center gap-3"
         >
           <div
             className="h-8 w-8 rounded-full flex items-center justify-center shrink-0 text-[11px] font-semibold uppercase text-accent-default/70"
@@ -352,13 +364,16 @@ function EmptyState({ icon, text }: { icon: string; text: string }) {
 
   return (
     <div className="flex flex-col items-center justify-center py-10 gap-3">
-      <div className="h-10 w-10 rounded-full flex items-center justify-center border border-accent-default/15">
-        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" className="text-accent-default/30">
+      <div className="h-12 w-12 rounded-full flex items-center justify-center border border-accent-default/15 bg-accent-default/[0.03]">
+        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" className="text-accent-default/30">
           {paths[icon] || paths.contacts}
         </svg>
       </div>
       <p className="text-[11px] uppercase tracking-widest text-text-muted">
         {text}
+      </p>
+      <p className="text-[10px] text-text-muted text-center max-w-[200px] leading-relaxed">
+        {icon === "contacts" ? "Search or add contacts via voice" : icon === "pipeline" ? "Deals will appear here" : "Conversations will appear here"}
       </p>
     </div>
   );
