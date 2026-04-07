@@ -6,29 +6,31 @@ type MetricsOverlayProps = {
   metrics: Metrics | null;
 };
 
-function badge(label: string, value: number) {
-  const tier = value < 300 ? "good" : value < 800 ? "ok" : "slow";
-  const classes = {
-    good: "text-[rgba(126,200,160,0.8)] border-[rgba(126,200,160,0.25)]",
-    ok: "text-[rgba(226,198,126,0.8)] border-[rgba(226,198,126,0.25)]",
-    slow: "text-[rgba(200,126,126,0.7)] border-[rgba(200,126,126,0.2)]",
-  };
-  return (
-    <span className={`inline-flex items-center gap-1.5 rounded-full px-3 py-1 text-[10px] font-mono tracking-wide border bg-slate-navy/40 ${classes[tier]}`}>
-      {label}{" "}
-      <strong>{value}</strong>ms
-    </span>
-  );
+function metricColor(ms: number): string {
+  if (ms < 300) return "var(--color-text-primary)";
+  if (ms < 800) return "var(--color-accent-bright)";
+  return "#FCA5A5";
 }
 
 export function MetricsOverlay({ metrics }: MetricsOverlayProps) {
   if (!metrics) return null;
 
+  const items = [
+    { label: "LLM", value: metrics.llm_ttfb_ms },
+    { label: "TTS", value: metrics.tts_ttfb_ms },
+    { label: "Total", value: metrics.total_ms },
+  ];
+
   return (
-    <div className="flex flex-wrap justify-center gap-2">
-      {badge("LLM", metrics.llm_ttfb_ms)}
-      {badge("TTS", metrics.tts_ttfb_ms)}
-      {badge("Total", metrics.total_ms)}
+    <div className="flex items-center justify-center gap-1 text-[11px] font-mono" style={{ fontFeatureSettings: '"tnum"' }}>
+      {items.map((item, i) => (
+        <span key={item.label} className="inline-flex items-center gap-1">
+          {i > 0 && <span className="text-text-muted mx-1">·</span>}
+          <span className="text-text-tertiary">{item.label}</span>
+          <span style={{ color: metricColor(item.value) }}>{item.value}</span>
+          <span className="text-text-muted">ms</span>
+        </span>
+      ))}
     </div>
   );
 }
