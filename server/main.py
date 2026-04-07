@@ -28,8 +28,6 @@ def _log_config():
         "Gemini": bool(settings.gemini_api_key),
         "xAI / Grok": bool(settings.xai_api_key),
         "ElevenLabs": bool(settings.elevenlabs_api_key),
-        "Deepgram": bool(settings.deepgram_api_key),
-        "Cartesia": bool(settings.cartesia_api_key),
         "GHL CRM": bool(settings.ghl_api_key and settings.ghl_location_id),
     }
     logger.info("=== ZeebsOS Configuration ===")
