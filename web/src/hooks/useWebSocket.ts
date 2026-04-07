@@ -17,6 +17,7 @@ type BaseMessage = {
   greeting?: string;
   model_id?: string;
   provider?: string;
+  tts_provider?: string;
   agent_id?: string;
   event_type?: string;
   category?: string;

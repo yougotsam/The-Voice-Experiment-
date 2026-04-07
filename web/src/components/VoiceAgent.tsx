@@ -217,7 +217,7 @@ export function VoiceAgent() {
           }
           break;
         case "config.current":
-          setServerConfig({ model_id: msg.model_id || "", tts_provider: msg.provider || "" });
+          setServerConfig({ model_id: msg.model_id || "", tts_provider: msg.tts_provider || "" });
           break;
         case "model.loaded":
         case "tts.loaded":
