@@ -544,7 +544,7 @@ export function VoiceAgent() {
               {entries.length || ""}
             </span>
           </div>
-          <div className="flex-1 overflow-y-auto p-3">
+          <div className="flex-1 min-h-0 p-3">
             <TranscriptPanel entries={entries} partialTranscript={partial} stagingEntries={stagingEntries} />
           </div>
         </div>

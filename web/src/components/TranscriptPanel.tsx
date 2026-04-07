@@ -46,7 +46,7 @@ export function TranscriptPanel({
   }, []);
 
   const isNearBottom = useCallback(() => {
-    const el = scrollRef.current?.parentElement;
+    const el = scrollRef.current;
     if (!el) return true;
     return el.scrollHeight - el.scrollTop - el.clientHeight < 80;
   }, []);
@@ -58,7 +58,7 @@ export function TranscriptPanel({
   }, [entries, partialTranscript, stagingEntries, isNearBottom]);
 
   useEffect(() => {
-    const el = scrollRef.current?.parentElement;
+    const el = scrollRef.current;
     if (!el) return;
     const handler = () => setShowScrollBtn(!isNearBottom());
     el.addEventListener("scroll", handler, { passive: true });
@@ -108,7 +108,7 @@ export function TranscriptPanel({
   }
 
   return (
-    <div className="relative" ref={scrollRef}>
+    <div className="relative h-full overflow-y-auto" ref={scrollRef}>
       <div className="space-y-3 pr-1">
         {feed.map((item) => {
           if (item.kind === "staging") {
