@@ -186,8 +186,8 @@ export function EngineSelector({ onModelChange, onTTSChange, onEngineChange, onV
   if (loading) {
     return (
       <div className="flex items-center gap-2">
-        <div className="h-7 w-32 rounded-lg bg-ivory/5 animate-pulse" />
-        <div className="h-7 w-20 rounded-lg bg-ivory/5 animate-pulse hidden sm:block" />
+        <div className="skeleton h-7 w-32" />
+        <div className="skeleton h-7 w-20 hidden sm:block" />
       </div>
     );
   }
@@ -203,9 +203,7 @@ export function EngineSelector({ onModelChange, onTTSChange, onEngineChange, onV
           value={activeEngine}
           onChange={(e) => handleEngineChange(e.target.value)}
           aria-label="Engine preset"
-          className="rounded-lg px-2.5 py-1.5 text-[11px] tracking-wide outline-none cursor-pointer
-            text-ivory/70 bg-slate-navy/60 border border-gold/15
-            transition-all duration-300 focus:ring-1 focus:ring-gold/30"
+          className="custom-select"
         >
           {engines.map((e) => (
             <option key={e.id} value={e.id}>{e.label}</option>
@@ -221,9 +219,7 @@ export function EngineSelector({ onModelChange, onTTSChange, onEngineChange, onV
             value={activeVoice}
             onChange={(e) => handleVoiceOverride(e.target.value)}
             aria-label="Voice"
-            className="rounded-lg px-2 py-1.5 text-[10px] tracking-wide outline-none cursor-pointer
-              text-ivory/50 bg-slate-navy/60 border border-gold/10
-              transition-all duration-300 focus:ring-1 focus:ring-gold/30"
+            className="custom-select text-[11px]"
           >
             {voices.map((v) => <option key={v.id} value={v.id}>{v.name}</option>)}
           </select>
@@ -248,15 +244,13 @@ export function EngineSelector({ onModelChange, onTTSChange, onEngineChange, onV
         <div className="flex items-center gap-1.5">
           <select value={activeModel} onChange={(e) => handleModelOverride(e.target.value)}
             aria-label="LLM model"
-            className="rounded-lg px-2 py-1 text-[10px] outline-none cursor-pointer
-              text-ivory/50 bg-slate-navy/60 border border-gold/10"
+            className="custom-select text-[11px]"
           >
             {models.map((m) => <option key={m.id} value={m.id}>{m.name}</option>)}
           </select>
           <select value={activeTTS} onChange={(e) => handleTTSOverride(e.target.value)}
             aria-label="TTS provider"
-            className="rounded-lg px-2 py-1 text-[10px] outline-none cursor-pointer
-              text-ivory/50 bg-slate-navy/60 border border-gold/10"
+            className="custom-select text-[11px]"
           >
             {ttsProviders.map((p) => <option key={p.id} value={p.id}>{p.name}</option>)}
           </select>
