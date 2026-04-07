@@ -7,7 +7,7 @@ type Persona = {
   icon: string;
 };
 
-export const PERSONAS: Persona[] = [
+const PERSONAS: Persona[] = [
   { id: "default", name: "Zeebs", tagline: "Strategist & Closer", icon: "Z" },
   { id: "sales", name: "Sales Pro", tagline: "Deals & Objections", icon: "S" },
   { id: "ops", name: "Ops Architect", tagline: "Systems & Automation", icon: "O" },

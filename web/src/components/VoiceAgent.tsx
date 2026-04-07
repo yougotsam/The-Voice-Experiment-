@@ -217,16 +217,12 @@ export function VoiceAgent() {
           }
           break;
         case "config.current":
-          setServerConfig({ model_id: (msg as unknown as Record<string, string>).model_id, tts_provider: (msg as unknown as Record<string, string>).tts_provider });
+          setServerConfig({ model_id: msg.model_id || "", tts_provider: msg.tts_provider || "" });
           break;
         case "model.loaded":
-          console.log("[Provider] LLM switched to:", msg.name);
-          break;
         case "tts.loaded":
-          console.log("[Provider] TTS switched to:", (msg as Record<string, unknown>).provider);
           break;
         case "error":
-          console.error("Server error:", msg.text);
           clearTimeout(errorTimer.current);
           setErrorToast(msg.text || "An error occurred");
           errorTimer.current = setTimeout(() => setErrorToast(null), ERROR_TOAST_MS);
@@ -412,12 +408,10 @@ export function VoiceAgent() {
     },
   });
 
-  const stateLabels: Record<AgentState, string> = {
-    idle: inputMode === "vad" ? "Listening" : "Ready",
-    listening: "Listening",
-    processing: "Thinking",
-    speaking: "Speaking",
-  };
+  const stateLabel = state === "idle" ? (inputMode === "vad" ? "Listening" : "Ready")
+    : state === "listening" ? "Listening"
+    : state === "processing" ? "Thinking"
+    : "Speaking";
 
   const mobileTabs: { id: MobileTab; label: string; icon: React.ReactNode }[] = useMemo(() => [
     {
@@ -562,7 +556,7 @@ export function VoiceAgent() {
           )}
           <VoiceOrb
             state={state}
-            label={stateLabels[state]}
+            label={stateLabel}
             connected={connected}
             inputMode={inputMode}
             onPushStart={handlePushToTalk}
