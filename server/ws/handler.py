@@ -39,7 +39,7 @@ logger = logging.getLogger(__name__)
 router = APIRouter()
 
 MAX_TEXT_LENGTH = 2000
-VALID_TTS_PROVIDERS = {"groq", "elevenlabs", "xai", "deepgram", "cartesia", "piper"}
+VALID_TTS_PROVIDERS = {"groq", "elevenlabs", "xai", "piper"}
 
 
 def _create_single_tts(provider: str):
@@ -49,12 +49,6 @@ def _create_single_tts(provider: str):
     if provider == "xai":
         from server.tts.xai import XaiTTS
         return XaiTTS(settings.xai_api_key, settings.xai_tts_voice)
-    if provider == "deepgram":
-        from server.tts.deepgram import DeepgramTTS
-        return DeepgramTTS(settings.deepgram_api_key, settings.deepgram_tts_voice)
-    if provider == "cartesia":
-        from server.tts.cartesia import CartesiaTTS
-        return CartesiaTTS(settings.cartesia_api_key, settings.cartesia_voice_id)
     if provider == "piper":
         from server.tts.piper import PiperTTS
         return PiperTTS(models_dir=settings.piper_models_dir, default_voice=settings.piper_voice)
@@ -149,7 +143,7 @@ async def websocket_endpoint(ws: WebSocket) -> None:
                 break
         default_tts = settings.tts_provider
         if default_tts == "fallback":
-            tts_key_map = {"groq": "llm_api_key", "elevenlabs": "elevenlabs_api_key", "xai": "xai_api_key", "deepgram": "deepgram_api_key", "cartesia": "cartesia_api_key"}
+            tts_key_map = {"groq": "llm_api_key", "elevenlabs": "elevenlabs_api_key", "xai": "xai_api_key"}
             chain = [n.strip() for n in settings.tts_fallback_chain.split(",") if n.strip()]
             default_tts = next(
                 (n for n in chain if tts_key_map.get(n) is None or getattr(settings, tts_key_map.get(n, ""), "")),
