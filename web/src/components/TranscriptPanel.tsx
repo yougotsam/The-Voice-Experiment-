@@ -9,6 +9,7 @@ export type TranscriptEntry = {
   timestamp: number;
   toolName?: string;
   toolSuccess?: boolean;
+  imageUrl?: string;
 };
 
 type FeedItem =
@@ -208,6 +209,16 @@ export function TranscriptPanel({
                 >
                   {entry.text}
                 </p>
+                {entry.imageUrl && (
+                  <a href={entry.imageUrl} target="_blank" rel="noopener noreferrer" className="block mt-2">
+                    <img
+                      src={entry.imageUrl}
+                      alt="Generated image"
+                      className="rounded-lg max-w-full max-h-64 border border-white/10 hover:border-white/20 transition-colors"
+                      loading="lazy"
+                    />
+                  </a>
+                )}
               </div>
             </div>
           );

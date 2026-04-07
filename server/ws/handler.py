@@ -34,6 +34,7 @@ from server.tools.ghl import (
     GHLSendEmail,
     GHLSendSMS,
 )
+from server.tools.imagine import GrokImagine
 
 logger = logging.getLogger(__name__)
 router = APIRouter()
@@ -83,11 +84,14 @@ async def websocket_endpoint(ws: WebSocket) -> None:
     session_id = str(uuid.uuid4())
     logger.info("WS connected: %s", session_id)
 
+    memory = getattr(ws.app.state, "memory", None)
+
     orchestrator: Orchestrator | None = None
     realtime_session = None
     ping_task: asyncio.Task | None = None
     try:
         session = ConversationSession(session_id)
+        await session.restore_from_memory(memory)
         stt = AssemblyAISTT(settings.assemblyai_api_key)
         llm = OpenAICompatLLM(settings.llm_api_key, settings.llm_base_url, settings.llm_model)
         try:
@@ -107,6 +111,9 @@ async def websocket_endpoint(ws: WebSocket) -> None:
 
         tool_registry = ToolRegistry()
         tool_registry.register(GHLDraftContent())
+        if settings.xai_api_key:
+            tool_registry.register(GrokImagine())
+            logger.info("Grok Imagine tool enabled for session %s", session_id)
         if settings.ghl_api_key and settings.ghl_location_id:
             tool_registry.register(GHLContactSearch())
             tool_registry.register(GHLCreateContact())
@@ -341,5 +348,7 @@ async def websocket_endpoint(ws: WebSocket) -> None:
             ping_task.cancel()
         if realtime_session:
             await realtime_session.close()
+        if session:
+            await session.persist_to_memory(memory)
         if orchestrator:
             await orchestrator.shutdown()

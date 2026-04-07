@@ -61,14 +61,16 @@ _register(
     AgentConfig(
         id="creative",
         name="Creative Agent",
-        description="Drafts content — blog posts, social captions, email copy, ad scripts.",
+        description="Drafts content and generates images — blog posts, social captions, email copy, ad scripts, visuals.",
         system_prompt_addon=(
             "You are a creative content specialist. Help draft compelling content "
             "tailored to the user's brand voice and audience. Focus on quality, "
-            "clarity, and engagement."
+            "clarity, and engagement. You can also generate images when the user "
+            "needs visuals, graphics, or illustrations."
         ),
         tools=[
             "draft_content",
+            "generate_image",
         ],
     ),
     AgentConfig(

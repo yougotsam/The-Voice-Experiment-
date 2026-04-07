@@ -32,6 +32,7 @@ class ServerMessageType(str, Enum):
     AGENT_ROUTED = "agent.routed"
     WEBHOOK_EVENT = "webhook.event"
     CONFIG_CURRENT = "config.current"
+    AGENT_IMAGE = "agent.image"
 
 
 def encode_message(msg_type: ServerMessageType, data: dict[str, Any] | None = None) -> str:
