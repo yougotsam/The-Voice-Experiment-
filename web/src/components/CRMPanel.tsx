@@ -225,7 +225,7 @@ function PipelineView({ opportunities }: { opportunities: Opportunity[] }) {
             <span className="text-[10px] font-medium uppercase tracking-wider text-accent-muted">
               {stage}
             </span>
-            <span className="text-[10px] text-text-muted/80">
+            <span className="text-[10px] text-text-muted">
               ({opps.length})
             </span>
           </div>
@@ -299,7 +299,7 @@ function ConversationsList({ conversations }: { conversations: Conversation[] })
               <p className="text-xs font-medium truncate text-text-primary/80">
                 {conv.contactName || "Unknown"}
               </p>
-              <span className="text-[9px] shrink-0 ml-2 text-text-muted/80">
+              <span className="text-[9px] shrink-0 ml-2 text-text-muted">
                 {conv.lastMessageDate ? formatRelativeDate(conv.lastMessageDate) : ""}
               </span>
             </div>

@@ -35,7 +35,7 @@ export function StagingArea({ entries }: StagingAreaProps) {
         <p className="text-[11px] uppercase tracking-widest text-text-muted">
           No drafts yet
         </p>
-        <p className="text-xs text-center max-w-[240px] text-text-muted/60">
+        <p className="text-xs text-center max-w-[240px] text-text-muted">
           Ask the agent to draft content and it will appear here for review
         </p>
       </div>
@@ -53,14 +53,14 @@ export function StagingArea({ entries }: StagingAreaProps) {
             <span className="text-[10px] font-medium uppercase tracking-wider text-accent-muted">
               {entry.type}
             </span>
-            <span className="text-[10px] text-text-muted/80">
+            <span className="text-[10px] text-text-muted">
               {new Date(entry.timestamp).toLocaleTimeString()}
             </span>
           </div>
           <h3 className="text-sm font-medium mb-1.5 text-text-primary/80">
             {entry.title}
           </h3>
-          <p className="text-xs leading-relaxed whitespace-pre-wrap text-text-secondary/80">
+          <p className="text-xs leading-relaxed whitespace-pre-wrap text-text-secondary">
             {entry.content}
           </p>
         </div>

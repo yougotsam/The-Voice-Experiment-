@@ -91,8 +91,8 @@ function ToolUsageBar({ usage }: { usage: Record<string, number> }) {
           </span>
           <div className="flex-1 h-3 rounded-full overflow-hidden bg-surface-2">
             <div
-              className="h-full rounded-full transition-all duration-500"
-              style={{ width: `${(count / max) * 100}%`, background: "rgba(200, 169, 126, 0.4)" }}
+              className="h-full rounded-full transition-all duration-500 bg-accent-default/40"
+              style={{ width: `${(count / max) * 100}%` }}
             />
           </div>
           <span className="text-[10px] w-6 text-right text-text-secondary">
@@ -118,7 +118,7 @@ function SessionView({ metrics }: { metrics: SessionAnalytics | null }) {
         <p className="text-[11px] uppercase tracking-widest text-text-muted">
           No session data yet
         </p>
-        <p className="text-xs text-center max-w-[240px] text-text-muted/60">
+        <p className="text-xs text-center max-w-[240px] text-text-muted">
           Start a conversation to see metrics
         </p>
       </div>
@@ -214,7 +214,7 @@ function BusinessView() {
         <p className="text-[11px] uppercase tracking-widest text-text-muted">
           GHL not connected
         </p>
-        <p className="text-xs text-center max-w-[240px] text-text-muted/60">
+        <p className="text-xs text-center max-w-[240px] text-text-muted">
           Configure GHL credentials to see business metrics
         </p>
       </div>

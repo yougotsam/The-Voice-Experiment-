@@ -57,7 +57,7 @@ export function TranscriptPanel({
         <p className="text-[11px] uppercase tracking-widest text-text-muted">
           No messages yet
         </p>
-        <p className="text-xs text-center max-w-[240px] text-text-muted/60">
+        <p className="text-xs text-center max-w-[240px] text-text-muted">
           Start talking or type a message to begin
         </p>
       </div>
@@ -73,8 +73,7 @@ export function TranscriptPanel({
             return (
               <div
                 key={s.id}
-                className="rounded-xl p-3 border border-accent-default/15"
-                style={{ background: "rgba(200, 169, 126, 0.04)" }}
+                className="rounded-xl p-3 border border-accent-default/15 bg-accent-default/[0.04]"
               >
                 <div className="flex items-center justify-between mb-1.5">
                   <span className="text-[9px] font-medium uppercase tracking-wider text-accent-default/70">
@@ -91,7 +90,7 @@ export function TranscriptPanel({
                 <p className="text-xs font-medium mb-1 text-text-primary/80">
                   {s.title}
                 </p>
-                <p className="text-[11px] leading-relaxed whitespace-pre-wrap text-text-secondary/80">
+                <p className="text-[11px] leading-relaxed whitespace-pre-wrap text-text-secondary">
                   {s.content}
                 </p>
               </div>
@@ -103,8 +102,7 @@ export function TranscriptPanel({
             return (
               <div key={`${entry.role}-${entry.timestamp}`} className="flex justify-center py-1">
                 <span
-                  className="rounded-full px-3 py-0.5 text-[9px] font-medium uppercase tracking-widest text-accent-muted border border-accent-default/15"
-                  style={{ background: "rgba(200, 169, 126, 0.08)" }}
+                  className="rounded-full px-3 py-0.5 text-[9px] font-medium uppercase tracking-widest text-accent-muted border border-accent-default/15 bg-accent-default/[0.08]"
                 >
                   {entry.text}
                 </span>
