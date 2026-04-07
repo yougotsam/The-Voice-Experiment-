@@ -25,6 +25,7 @@ class Settings(BaseSettings):
     ghl_api_key: str = ""
     ghl_location_id: str = ""
     ghl_webhook_secret: str = ""
+    redis_url: str = ""
     cors_origins: str = "http://localhost:3000"
 
     model_config = {"env_file": ".env", "env_file_encoding": "utf-8"}

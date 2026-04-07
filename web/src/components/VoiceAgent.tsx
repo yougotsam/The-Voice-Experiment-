@@ -127,6 +127,14 @@ export function VoiceAgent() {
             ];
           });
           break;
+        case "agent.image":
+          if (msg.image_url) {
+            cappedSetEntries((prev) => [
+              ...prev,
+              { role: "agent", text: msg.prompt || "Generated image", timestamp: Date.now(), imageUrl: msg.image_url },
+            ]);
+          }
+          break;
         case "agent.audio.start":
           if (msg.sample_rate) setSampleRate(msg.sample_rate);
           setAgentState("speaking");

@@ -12,6 +12,7 @@ from server.api.providers import router as providers_router
 from server.api.analytics import router as analytics_router
 from server.api.webhooks import router as webhooks_router
 from server.tools.ghl import close_ghl_client
+from server.memory.redis import RedisMemory
 
 logging.basicConfig(
     level=logging.INFO,
@@ -45,7 +46,18 @@ def _log_config():
 @asynccontextmanager
 async def lifespan(_app: FastAPI):
     _log_config()
+    memory = None
+    if settings.redis_url:
+        memory = RedisMemory(settings.redis_url)
+        await memory.connect()
+        _app.state.memory = memory
+        logger.info("Redis memory enabled")
+    else:
+        _app.state.memory = None
+        logger.info("Redis memory disabled (set REDIS_URL in .env to enable)")
     yield
+    if memory:
+        await memory.close()
     await close_ghl_client()
 
 

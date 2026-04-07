@@ -23,6 +23,8 @@ type BaseMessage = {
   category?: string;
   contact_name?: string;
   details?: Record<string, unknown>;
+  image_url?: string;
+  prompt?: string;
 };
 
 export type ServerMessage = BaseMessage & (
@@ -31,6 +33,7 @@ export type ServerMessage = BaseMessage & (
   | { type: "agent.text" }
   | { type: "agent.audio.start" }
   | { type: "agent.audio.end" }
+  | { type: "agent.image" }
   | { type: "metrics" }
   | { type: "analytics" }
   | { type: "status" }
