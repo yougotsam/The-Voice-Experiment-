@@ -106,12 +106,11 @@ export function CRMPanel({ refreshKey = 0 }: CRMPanelProps) {
             key={btn.id}
             type="button"
             onClick={() => setView(btn.id)}
-            className="px-3 py-1.5 rounded-lg text-[10px] font-medium uppercase tracking-wider transition-all duration-200"
-            style={{
-              background: view === btn.id ? "rgba(200, 169, 126, 0.12)" : "transparent",
-              color: view === btn.id ? "rgba(200, 169, 126, 0.9)" : "rgba(244, 240, 234, 0.35)",
-              border: view === btn.id ? "1px solid rgba(200, 169, 126, 0.2)" : "1px solid transparent",
-            }}
+            className={`px-3 py-1.5 rounded-lg text-[10px] font-medium uppercase tracking-wider transition-all duration-200 border ${
+              view === btn.id
+                ? "bg-accent-default/12 text-accent-bright border-accent-default/20"
+                : "bg-transparent text-text-tertiary border-transparent"
+            }`}
           >
             {btn.label}
           </button>
@@ -119,8 +118,7 @@ export function CRMPanel({ refreshKey = 0 }: CRMPanelProps) {
         <button
           type="button"
           onClick={() => fetchData(view)}
-          className="ml-auto px-2 py-1.5 rounded-lg text-[10px] uppercase tracking-wider transition-all duration-200 hover:bg-white/5"
-          style={{ color: "rgba(244, 240, 234, 0.3)" }}
+          className="ml-auto px-2 py-1.5 rounded-lg text-[10px] uppercase tracking-wider transition-all duration-200 hover:bg-white/5 text-text-tertiary"
           aria-label="Refresh"
         >
           {loading ? "..." : "↻"}
@@ -134,20 +132,11 @@ export function CRMPanel({ refreshKey = 0 }: CRMPanelProps) {
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}
             placeholder="Search contacts..."
-            className="flex-1 rounded-lg px-3 py-1.5 text-xs outline-none"
-            style={{
-              background: "rgba(18, 34, 54, 0.4)",
-              border: "1px solid rgba(200, 169, 126, 0.08)",
-              color: "rgba(244, 240, 234, 0.8)",
-            }}
+            className="flex-1 rounded-lg px-3 py-1.5 text-xs outline-none bg-surface-1 border border-accent-default/8 text-text-primary/80"
           />
           <button
             type="submit"
-            className="px-3 py-1.5 rounded-lg text-[10px] font-medium uppercase tracking-wider"
-            style={{
-              border: "1px solid rgba(200, 169, 126, 0.15)",
-              color: "rgba(200, 169, 126, 0.6)",
-            }}
+            className="px-3 py-1.5 rounded-lg text-[10px] font-medium uppercase tracking-wider border border-accent-default/15 text-accent-muted"
           >
             Search
           </button>
@@ -162,7 +151,7 @@ export function CRMPanel({ refreshKey = 0 }: CRMPanelProps) {
 
       {loading && !error && (
         <div className="flex items-center justify-center py-8">
-          <p className="text-[11px] uppercase tracking-widest" style={{ color: "rgba(244, 240, 234, 0.25)" }}>
+          <p className="text-[11px] uppercase tracking-widest text-text-muted">
             Loading...
           </p>
         </div>
@@ -185,26 +174,16 @@ function ContactsList({ contacts }: { contacts: Contact[] }) {
       {contacts.map((c) => (
         <div
           key={c.id}
-          className="rounded-lg px-3 py-2.5 flex items-center gap-3"
-          style={{
-            background: "rgba(18, 34, 54, 0.4)",
-            border: "1px solid rgba(200, 169, 126, 0.06)",
-          }}
+          className="rounded-lg px-3 py-2.5 flex items-center gap-3 bg-surface-1 border border-accent-default/6"
         >
-          <div
-            className="h-8 w-8 rounded-full flex items-center justify-center shrink-0 text-[11px] font-semibold uppercase"
-            style={{
-              background: "rgba(200, 169, 126, 0.1)",
-              color: "rgba(200, 169, 126, 0.7)",
-            }}
-          >
+          <div className="h-8 w-8 rounded-full flex items-center justify-center shrink-0 text-[11px] font-semibold uppercase bg-accent-default/10 text-accent-default/70">
             {c.name.charAt(0) || "?"}
           </div>
           <div className="flex-1 min-w-0">
-            <p className="text-xs font-medium truncate" style={{ color: "rgba(244, 240, 234, 0.8)" }}>
+            <p className="text-xs font-medium truncate text-text-primary/80">
               {c.name || "Unnamed"}
             </p>
-            <p className="text-[10px] truncate" style={{ color: "rgba(244, 240, 234, 0.35)" }}>
+            <p className="text-[10px] truncate text-text-tertiary">
               {c.email || c.phone || "No contact info"}
             </p>
           </div>
@@ -213,11 +192,7 @@ function ContactsList({ contacts }: { contacts: Contact[] }) {
               {c.tags.slice(0, 2).map((tag) => (
                 <span
                   key={tag}
-                  className="px-1.5 py-0.5 rounded text-[9px] uppercase tracking-wider"
-                  style={{
-                    background: "rgba(200, 169, 126, 0.08)",
-                    color: "rgba(200, 169, 126, 0.5)",
-                  }}
+                  className="px-1.5 py-0.5 rounded text-[9px] uppercase tracking-wider bg-accent-default/8 text-accent-muted"
                 >
                   {tag}
                 </span>
@@ -247,10 +222,10 @@ function PipelineView({ opportunities }: { opportunities: Opportunity[] }) {
       {Object.entries(grouped).map(([stage, opps]) => (
         <div key={stage}>
           <div className="flex items-center gap-2 mb-1.5">
-            <span className="text-[10px] font-medium uppercase tracking-wider" style={{ color: "rgba(200, 169, 126, 0.6)" }}>
+            <span className="text-[10px] font-medium uppercase tracking-wider text-accent-muted">
               {stage}
             </span>
-            <span className="text-[10px]" style={{ color: "rgba(244, 240, 234, 0.2)" }}>
+            <span className="text-[10px] text-text-muted">
               ({opps.length})
             </span>
           </div>
@@ -258,25 +233,21 @@ function PipelineView({ opportunities }: { opportunities: Opportunity[] }) {
             {opps.map((opp) => (
               <div
                 key={opp.id}
-                className="rounded-lg px-3 py-2 flex items-center justify-between"
-                style={{
-                  background: "rgba(18, 34, 54, 0.4)",
-                  border: "1px solid rgba(200, 169, 126, 0.06)",
-                }}
+                className="rounded-lg px-3 py-2 flex items-center justify-between bg-surface-1 border border-accent-default/6"
               >
                 <div className="min-w-0 flex-1">
-                  <p className="text-xs font-medium truncate" style={{ color: "rgba(244, 240, 234, 0.8)" }}>
+                  <p className="text-xs font-medium truncate text-text-primary/80">
                     {opp.name}
                   </p>
                   {opp.contactName && (
-                    <p className="text-[10px] truncate" style={{ color: "rgba(244, 240, 234, 0.35)" }}>
+                    <p className="text-[10px] truncate text-text-tertiary">
                       {opp.contactName}
                     </p>
                   )}
                 </div>
                 <div className="flex items-center gap-2 shrink-0">
                   {opp.monetaryValue > 0 && (
-                    <span className="text-xs font-medium" style={{ color: "rgba(200, 169, 126, 0.7)" }}>
+                    <span className="text-xs font-medium text-accent-default/70">
                       ${opp.monetaryValue.toLocaleString()}
                     </span>
                   )}
@@ -288,7 +259,7 @@ function PipelineView({ opportunities }: { opportunities: Opportunity[] }) {
                                   "rgba(200, 169, 126, 0.08)",
                       color: opp.status === "won" ? "rgba(80, 180, 80, 0.8)" :
                              opp.status === "lost" ? "rgba(220, 80, 80, 0.8)" :
-                             "rgba(200, 169, 126, 0.5)",
+                             "var(--color-accent-muted)",
                     }}
                   >
                     {opp.status}
@@ -313,44 +284,36 @@ function ConversationsList({ conversations }: { conversations: Conversation[] })
       {conversations.map((conv) => (
         <div
           key={conv.id}
-          className="rounded-lg px-3 py-2.5 flex items-center gap-3"
-          style={{
-            background: "rgba(18, 34, 54, 0.4)",
-            border: "1px solid rgba(200, 169, 126, 0.06)",
-          }}
+          className="rounded-lg px-3 py-2.5 flex items-center gap-3 bg-surface-1 border border-accent-default/6"
         >
           <div
-            className="h-8 w-8 rounded-full flex items-center justify-center shrink-0 text-[11px] font-semibold uppercase"
+            className="h-8 w-8 rounded-full flex items-center justify-center shrink-0 text-[11px] font-semibold uppercase text-accent-default/70"
             style={{
               background: conv.unreadCount > 0 ? "rgba(200, 169, 126, 0.15)" : "rgba(200, 169, 126, 0.06)",
-              color: "rgba(200, 169, 126, 0.7)",
             }}
           >
             {conv.contactName.charAt(0) || "?"}
           </div>
           <div className="flex-1 min-w-0">
             <div className="flex items-center justify-between">
-              <p className="text-xs font-medium truncate" style={{ color: "rgba(244, 240, 234, 0.8)" }}>
+              <p className="text-xs font-medium truncate text-text-primary/80">
                 {conv.contactName || "Unknown"}
               </p>
-              <span className="text-[9px] shrink-0 ml-2" style={{ color: "rgba(244, 240, 234, 0.2)" }}>
+              <span className="text-[9px] shrink-0 ml-2 text-text-muted">
                 {conv.lastMessageDate ? formatRelativeDate(conv.lastMessageDate) : ""}
               </span>
             </div>
             <div className="flex items-center gap-1.5">
-              <span className="text-[9px] uppercase shrink-0" style={{ color: "rgba(200, 169, 126, 0.4)" }}>
+              <span className="text-[9px] uppercase shrink-0 text-accent-default/40">
                 {conv.lastMessageType || "msg"}
               </span>
-              <p className="text-[10px] truncate" style={{ color: "rgba(244, 240, 234, 0.35)" }}>
+              <p className="text-[10px] truncate text-text-tertiary">
                 {conv.lastMessage || "No messages"}
               </p>
             </div>
           </div>
           {conv.unreadCount > 0 && (
-            <span
-              className="h-4 min-w-[16px] px-1 rounded-full flex items-center justify-center text-[9px] font-bold shrink-0"
-              style={{ background: "rgba(200, 169, 126, 0.25)", color: "rgba(200, 169, 126, 0.9)" }}
-            >
+            <span className="h-4 min-w-[16px] px-1 rounded-full flex items-center justify-center text-[9px] font-bold shrink-0 bg-accent-default/25 text-accent-bright">
               {conv.unreadCount}
             </span>
           )}
@@ -385,15 +348,12 @@ function EmptyState({ icon, text }: { icon: string; text: string }) {
 
   return (
     <div className="flex flex-col items-center justify-center py-10 gap-3">
-      <div
-        className="h-10 w-10 rounded-full flex items-center justify-center"
-        style={{ border: "1px solid rgba(200, 169, 126, 0.15)" }}
-      >
-        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" style={{ color: "rgba(200, 169, 126, 0.3)" }}>
+      <div className="h-10 w-10 rounded-full flex items-center justify-center border border-accent-default/15">
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" className="text-accent-default/30">
           {paths[icon] || paths.contacts}
         </svg>
       </div>
-      <p className="text-[11px] uppercase tracking-widest" style={{ color: "rgba(244, 240, 234, 0.25)" }}>
+      <p className="text-[11px] uppercase tracking-widest text-text-muted">
         {text}
       </p>
     </div>

@@ -13,6 +13,19 @@
   --color-ivory: #F4F0EA;
   --font-heading: 'Cormorant Garamond', serif;
   --font-body: 'Inter', sans-serif;
+
+  --color-text-primary: #F4F0EA;
+  --color-text-secondary: rgba(244, 240, 234, 0.70);
+  --color-text-tertiary: rgba(244, 240, 234, 0.40);
+  --color-text-muted: rgba(244, 240, 234, 0.25);
+
+  --color-surface-1: rgba(18, 34, 54, 0.40);
+  --color-surface-2: rgba(18, 34, 54, 0.60);
+  --color-surface-hover: rgba(18, 34, 54, 0.50);
+
+  --color-accent-bright: #E2C69D;
+  --color-accent-default: #C8A97E;
+  --color-accent-muted: rgba(200, 169, 126, 0.50);
 }
 
 body {
@@ -49,7 +62,7 @@ body {
   font-size: 0.5625rem;
   text-transform: uppercase;
   letter-spacing: 0.15em;
-  color: rgba(244, 240, 234, 0.3);
+  color: var(--color-text-tertiary);
 }
 
 @keyframes pulse-ring {
