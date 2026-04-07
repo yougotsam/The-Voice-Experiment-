@@ -83,7 +83,3 @@ _register(
 
 def get_agent(agent_id: str) -> AgentConfig:
     return AGENT_REGISTRY.get(agent_id, AGENT_REGISTRY["default"])
-
-
-def list_agents() -> list[dict[str, str]]:
-    return [{"id": a.id, "name": a.name, "description": a.description} for a in AGENT_REGISTRY.values()]

@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import hmac
 import logging
 from typing import Any
 
@@ -134,9 +135,9 @@ def _build_summary(event_type: str, category: str, body: dict[str, Any]) -> str:
 
 @router.post("/ghl")
 async def ghl_webhook(request: Request) -> Response:
-    secret = request.query_params.get("secret", "")
+    secret = request.headers.get("x-webhook-secret", "") or request.query_params.get("secret", "")
     expected = settings.ghl_webhook_secret
-    if expected and secret != expected:
+    if expected and not hmac.compare_digest(secret, expected):
         logger.warning("Webhook rejected: invalid secret")
         return Response(status_code=401)
 

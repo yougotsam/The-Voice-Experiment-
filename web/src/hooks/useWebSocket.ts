@@ -2,15 +2,14 @@
 
 import { useCallback, useEffect, useRef, useState } from "react";
 
-export type ServerMessage = {
-  type: string;
+type BaseMessage = {
   text?: string;
+  name?: string;
   status?: string;
   sample_rate?: number;
   llm_ttfb_ms?: number;
   tts_ttfb_ms?: number;
   total_ms?: number;
-  name?: string;
   arguments?: Record<string, unknown>;
   success?: boolean;
   summary?: string;
@@ -24,6 +23,27 @@ export type ServerMessage = {
   contact_name?: string;
   details?: Record<string, unknown>;
 };
+
+export type ServerMessage = BaseMessage & (
+  | { type: "transcript.partial" }
+  | { type: "transcript.final" }
+  | { type: "agent.text" }
+  | { type: "agent.audio.start" }
+  | { type: "agent.audio.end" }
+  | { type: "metrics" }
+  | { type: "analytics" }
+  | { type: "status" }
+  | { type: "tool_call.start" }
+  | { type: "tool_call.result" }
+  | { type: "persona.loaded" }
+  | { type: "agent.routed" }
+  | { type: "webhook.event" }
+  | { type: "config.current" }
+  | { type: "model.loaded" }
+  | { type: "tts.loaded" }
+  | { type: "error" }
+  | { type: "ping" }
+);
 
 type UseWebSocketOptions = {
   url: string;
@@ -63,7 +83,6 @@ export function useWebSocket({
     ws.binaryType = "arraybuffer";
 
     ws.onopen = () => {
-      console.log("[WS] connected to", url);
       setConnected(true);
       onOpenRef.current?.();
     };
@@ -87,8 +106,7 @@ export function useWebSocket({
       }
     };
 
-    ws.onclose = (event) => {
-      console.log("[WS] closed — code:", event.code, "reason:", event.reason);
+    ws.onclose = () => {
       setConnected(false);
       onCloseRef.current?.();
       if (mountedRef.current) {
@@ -97,7 +115,6 @@ export function useWebSocket({
     };
 
     ws.onerror = () => {
-      console.error("[WS] connection error — server may be unreachable at", url);
       ws.close();
     };
 
