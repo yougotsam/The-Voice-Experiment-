@@ -106,13 +106,17 @@ export function CRMPanel({ refreshKey = 0 }: CRMPanelProps) {
             key={btn.id}
             type="button"
             onClick={() => setView(btn.id)}
-            className={`px-3 py-1.5 rounded-lg text-[10px] font-medium uppercase tracking-wider transition-all duration-200 border ${
+            className={`px-3 py-1.5 rounded-lg text-[10px] uppercase tracking-wider transition-all duration-200 relative ${
               view === btn.id
-                ? "bg-accent-default/12 text-accent-bright border-accent-default/20"
-                : "bg-transparent text-text-tertiary border-transparent"
+                ? "text-accent-bright"
+                : "text-text-tertiary hover:text-text-secondary"
             }`}
+            style={{ fontWeight: 510 }}
           >
             {btn.label}
+            {view === btn.id && (
+              <div className="absolute bottom-0 left-2 right-2 h-[2px] rounded-full bg-accent-default/60" />
+            )}
           </button>
         ))}
         <button
@@ -132,7 +136,7 @@ export function CRMPanel({ refreshKey = 0 }: CRMPanelProps) {
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}
             placeholder="Search contacts..."
-            className="flex-1 rounded-lg px-3 py-1.5 text-xs outline-none bg-surface-1 border border-accent-default/8 text-text-primary/80"
+            className="flex-1 rounded-lg px-3 py-1.5 text-xs outline-none bg-surface-1 border border-white/[0.06] text-text-primary/80"
           />
           <button
             type="submit"
@@ -174,7 +178,7 @@ function ContactsList({ contacts }: { contacts: Contact[] }) {
       {contacts.map((c) => (
         <div
           key={c.id}
-          className="rounded-lg px-3 py-2.5 flex items-center gap-3 bg-surface-1 border border-accent-default/6"
+          className="rounded-lg px-3 py-2.5 flex items-center gap-3 bg-surface-1 border border-white/[0.06]"
         >
           <div className="h-8 w-8 rounded-full flex items-center justify-center shrink-0 text-[11px] font-semibold uppercase bg-accent-default/10 text-accent-default/70">
             {c.name.charAt(0) || "?"}
@@ -233,7 +237,7 @@ function PipelineView({ opportunities }: { opportunities: Opportunity[] }) {
             {opps.map((opp) => (
               <div
                 key={opp.id}
-                className="rounded-lg px-3 py-2 flex items-center justify-between bg-surface-1 border border-accent-default/6"
+                className="rounded-lg px-3 py-2 flex items-center justify-between bg-surface-1 border border-white/[0.06]"
               >
                 <div className="min-w-0 flex-1">
                   <p className="text-xs font-medium truncate text-text-primary/80">
@@ -284,7 +288,7 @@ function ConversationsList({ conversations }: { conversations: Conversation[] })
       {conversations.map((conv) => (
         <div
           key={conv.id}
-          className="rounded-lg px-3 py-2.5 flex items-center gap-3 bg-surface-1 border border-accent-default/6"
+          className="rounded-lg px-3 py-2.5 flex items-center gap-3 bg-surface-1 border border-white/[0.06]"
         >
           <div
             className="h-8 w-8 rounded-full flex items-center justify-center shrink-0 text-[11px] font-semibold uppercase text-accent-default/70"

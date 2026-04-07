@@ -445,10 +445,15 @@ export function VoiceAgent() {
       <div className="noise-overlay" />
 
       <header
-        className="glass-panel flex items-center gap-3 px-4 py-2.5 shrink-0 z-20 rounded-none"
-        style={{ borderTop: "none", borderLeft: "none", borderRight: "none" }}
+        className="glass-panel flex items-center gap-3 px-5 py-3 shrink-0 z-20 rounded-none"
+        style={{
+          borderTop: "none",
+          borderLeft: "none",
+          borderRight: "none",
+          boxShadow: "0 1px 0 0 rgba(255,255,255,0.04), 0 4px 16px -4px rgba(0,0,0,0.4)",
+        }}
       >
-        <h1 className="text-lg font-heading font-semibold tracking-wide text-ivory shrink-0">
+        <h1 className="text-lg font-heading font-semibold text-ivory shrink-0" style={{ letterSpacing: "-0.03em" }}>
           ZeebsOS
         </h1>
 
@@ -489,7 +494,7 @@ export function VoiceAgent() {
         <div
           className={`w-80 xl:w-[340px] shrink-0 flex-col glass-panel m-3 mr-1.5 rounded-2xl overflow-hidden ${mobileTab === "conversation" ? "flex" : "hidden"} lg:flex`}
         >
-          <div className="px-4 py-3 flex items-center justify-between shrink-0 border-b border-gold/6">
+          <div className="px-4 py-3 flex items-center justify-between shrink-0 border-b border-white/[0.06]">
             <span className="micro-label">Conversation</span>
             <span className="text-[10px] font-mono text-ivory/20">
               {entries.length || ""}
@@ -571,18 +576,19 @@ export function VoiceAgent() {
         <div
           className={`w-80 xl:w-[340px] shrink-0 flex-col glass-panel m-3 ml-1.5 rounded-2xl overflow-hidden ${mobileTab === "intel" ? "flex" : "hidden"} lg:flex`}
         >
-          <div className="flex shrink-0 border-b border-gold/6">
+          <div className="flex shrink-0 border-b border-white/[0.06]">
             {(["crm", "analytics", "drafts"] as const).map((tab) => (
               <button
                 key={tab}
                 type="button"
                 onClick={() => setIntelTab(tab)}
-                className={`flex-1 px-3 py-3 text-[10px] font-medium uppercase tracking-[0.15em] transition-all duration-300 relative
-                  ${intelTab === tab ? "text-gold-light bg-gold/6" : "text-ivory/30"}`}
+                className={`flex-1 px-3 py-3 text-[10px] uppercase tracking-[0.15em] transition-all duration-300 relative
+                  ${intelTab === tab ? "text-gold-light" : "text-ivory/30 hover:text-ivory/50"}`}
+                style={{ fontWeight: 510 }}
               >
                 {tab === "crm" ? "CRM" : tab === "analytics" ? "Analytics" : "Drafts"}
                 {intelTab === tab && (
-                  <div className="absolute bottom-0 left-1/4 right-1/4 h-px bg-gold/40" />
+                  <div className="absolute bottom-0 left-3 right-3 h-[2px] rounded-full bg-gold/60" />
                 )}
               </button>
             ))}
