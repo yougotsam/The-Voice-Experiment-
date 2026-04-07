@@ -45,6 +45,12 @@ class AssemblyAISTT(STTProvider):
             logger.info("AssemblyAI v3 session started: %s", session_data.get("id"))
         except Exception as v3_err:
             logger.warning("AssemblyAI v3 failed (%s), falling back to v2", v3_err)
+            if self._ws:
+                try:
+                    await self._ws.close()
+                except Exception:
+                    pass
+                self._ws = None
             self._using_v3 = False
             try:
                 self._ws = await self._connect_v2(ssl_ctx)
