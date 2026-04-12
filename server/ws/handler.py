@@ -21,7 +21,7 @@ from server.pipeline.session import ConversationSession
 from server.pipeline.metrics import SessionMetrics
 from server.agents.router import AgentRouter
 from server.tools.base import ToolRegistry
-from server.ws.connections import manager as ws_manager
+from server.ws.connections import manager as ws_manager, CapacityError
 from server.tools.ghl import (
     GHLContactSearch,
     GHLCreateContact,
@@ -80,10 +80,6 @@ def _create_tts():
 
 @router.websocket("/ws")
 async def websocket_endpoint(ws: WebSocket) -> None:
-    if ws_manager.at_capacity:
-        await ws.close(code=1013, reason="Server at capacity")
-        return
-
     await ws.accept()
     session_id = str(uuid.uuid4())
     logger.info("WS connected: %s", session_id)
@@ -148,7 +144,11 @@ async def websocket_endpoint(ws: WebSocket) -> None:
             except Exception:
                 logger.warning("Ping loop error for %s", session_id, exc_info=True)
 
-        ws_manager.register(session_id, send_json)
+        try:
+            ws_manager.try_register(session_id, send_fn=send_json)
+        except CapacityError:
+            await ws.close(code=1013, reason="Server at capacity")
+            return
         ping_task = asyncio.create_task(_ping_loop())
 
         default_model_id = ""

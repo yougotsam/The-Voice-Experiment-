@@ -47,9 +47,13 @@ class RateLimitMiddleware(BaseHTTPMiddleware):
 
         timestamps = self._hits[client_ip]
         cutoff = now - self._window
-        self._hits[client_ip] = [t for t in timestamps if t > cutoff]
+        pruned = [t for t in timestamps if t > cutoff]
+        if pruned:
+            self._hits[client_ip] = pruned
+        else:
+            self._hits.pop(client_ip, None)
 
-        if len(self._hits[client_ip]) >= self._rpm:
+        if len(pruned) >= self._rpm:
             logger.warning("Rate limit exceeded for %s on %s", client_ip, request.url.path)
             return JSONResponse(
                 {"detail": "Rate limit exceeded. Try again shortly."},

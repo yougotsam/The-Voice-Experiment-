@@ -10,15 +10,17 @@ SendFn = Callable[[str, dict[str, Any]], Awaitable[None]]
 MAX_CONNECTIONS = 100
 
 
+class CapacityError(Exception):
+    """Raised when the server has reached its maximum WebSocket connection limit."""
+
+
 class ConnectionManager:
     def __init__(self) -> None:
         self._connections: dict[str, SendFn] = {}
 
-    @property
-    def at_capacity(self) -> bool:
-        return len(self._connections) >= MAX_CONNECTIONS
-
-    def register(self, session_id: str, send_fn: SendFn) -> None:
+    def try_register(self, session_id: str, send_fn: SendFn) -> None:
+        if len(self._connections) >= MAX_CONNECTIONS:
+            raise CapacityError(f"At capacity ({MAX_CONNECTIONS} connections)")
         self._connections[session_id] = send_fn
         logger.info("WS registered for broadcasts: %s (%d total)", session_id, len(self._connections))
 
