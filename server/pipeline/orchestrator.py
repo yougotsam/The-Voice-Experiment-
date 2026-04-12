@@ -185,8 +185,10 @@ class Orchestrator:
             self._response_task.cancel()
             try:
                 await self._response_task
-            except (asyncio.CancelledError, Exception):
+            except asyncio.CancelledError:
                 pass
+            except Exception:
+                logger.warning("Error while cancelling pending response", exc_info=True)
 
     async def _on_final_transcript(self, text: str) -> None:
         await self._send_json("transcript.final", {"text": text})
