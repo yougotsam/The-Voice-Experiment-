@@ -46,7 +46,7 @@ class RateLimitMiddleware(BaseHTTPMiddleware):
         return client_ip
 
     async def dispatch(self, request: Request, call_next) -> Response:
-        if request.url.path in ("/health", "/ws"):
+        if request.url.path in ("/health", "/ws") or request.method == "OPTIONS":
             return await call_next(request)
 
         client_ip = self._get_client_ip(request)
