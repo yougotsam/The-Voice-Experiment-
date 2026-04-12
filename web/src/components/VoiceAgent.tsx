@@ -333,20 +333,6 @@ export function VoiceAgent() {
     [sendJSON, cleanupActiveSession, stopPlayback, setAgentState],
   );
 
-  const handleModelChange = useCallback(
-    (modelId: string) => {
-      sendJSON({ type: "config", model_id: modelId });
-    },
-    [sendJSON],
-  );
-
-  const handleTTSChange = useCallback(
-    (providerId: string) => {
-      sendJSON({ type: "config", tts_provider: providerId });
-    },
-    [sendJSON],
-  );
-
   const handleEngineChange = useCallback(
     (modelId: string | undefined, ttsId: string | undefined) => {
       const msg: Record<string, unknown> = { type: "config" };
@@ -472,7 +458,7 @@ export function VoiceAgent() {
         </h1>
 
         <div className="flex-1 flex items-center justify-center gap-2 min-w-0">
-          <EngineSelector onModelChange={handleModelChange} onTTSChange={handleTTSChange} onEngineChange={handleEngineChange} onVoiceChange={handleVoiceChange} serverConfig={serverConfig} />
+          <EngineSelector onEngineChange={handleEngineChange} onVoiceChange={handleVoiceChange} serverConfig={serverConfig} />
         </div>
 
         <div className="flex items-center gap-3 shrink-0">
