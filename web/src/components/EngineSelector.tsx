@@ -14,9 +14,7 @@ type Engine = {
 };
 
 type EngineSelectorProps = {
-  onModelChange: (modelId: string) => void;
-  onTTSChange: (providerId: string) => void;
-  onEngineChange?: (modelId: string | undefined, ttsId: string | undefined) => void;
+  onEngineChange: (modelId: string | undefined, ttsId: string | undefined) => void;
   onVoiceChange?: (voiceId: string) => void;
   serverConfig?: { model_id: string; tts_provider: string } | null;
 };
@@ -67,13 +65,9 @@ function buildEngines(models: ProviderOption[], ttsProviders: ProviderOption[]):
   return engines;
 }
 
-export function EngineSelector({ onModelChange, onTTSChange, onEngineChange, onVoiceChange, serverConfig }: EngineSelectorProps) {
+export function EngineSelector({ onEngineChange, onVoiceChange, serverConfig }: EngineSelectorProps) {
   const [engines, setEngines] = useState<Engine[]>([]);
   const [activeEngine, setActiveEngine] = useState("");
-  const [showAdvanced, setShowAdvanced] = useState(false);
-  const [models, setModels] = useState<ProviderOption[]>([]);
-  const [ttsProviders, setTTSProviders] = useState<ProviderOption[]>([]);
-  const [activeModel, setActiveModel] = useState("");
   const [activeTTS, setActiveTTS] = useState("");
   const [synced, setSynced] = useState(false);
   const [voices, setVoices] = useState<ProviderOption[]>([]);
@@ -87,9 +81,6 @@ export function EngineSelector({ onModelChange, onTTSChange, onEngineChange, onV
     ]).then(([modelData, ttsData]) => {
       const m = modelData.models || [];
       const t = ttsData.providers || [];
-      setModels(m);
-      setTTSProviders(t);
-      setActiveModel(modelData.default || m[0]?.id || "");
       setActiveTTS(ttsData.default || t[0]?.id || "");
       setEngines(buildEngines(m, t));
     }).finally(() => {
@@ -103,12 +94,11 @@ export function EngineSelector({ onModelChange, onTTSChange, onEngineChange, onV
       const match = engines.find((e) => e.modelId === serverConfig.model_id && e.ttsId === serverConfig.tts_provider);
       if (match) {
         setActiveEngine(match.id);
-        setActiveModel(match.modelId || "");
         setActiveTTS(match.ttsId || "");
       } else {
-        setActiveEngine("");
-        setActiveModel(serverConfig.model_id);
-        setActiveTTS(serverConfig.tts_provider);
+        const fallback = engines[0];
+        setActiveEngine(fallback?.id || "");
+        setActiveTTS(fallback?.ttsId || "");
       }
       setSynced(true);
     }
@@ -145,37 +135,13 @@ export function EngineSelector({ onModelChange, onTTSChange, onEngineChange, onV
       setActiveEngine(engineId);
       const engine = engines.find((e) => e.id === engineId);
       if (!engine) return;
-      if (engine.modelId) setActiveModel(engine.modelId);
       if (engine.ttsId) setActiveTTS(engine.ttsId);
-      if (onEngineChange) {
-        onEngineChange(engine.modelId, engine.ttsId);
-      } else {
-        if (engine.modelId) onModelChange(engine.modelId);
-        if (engine.ttsId) onTTSChange(engine.ttsId);
-      }
+      onEngineChange(engine.modelId, engine.ttsId);
     },
-    [engines, onModelChange, onTTSChange, onEngineChange],
+    [engines, onEngineChange],
   );
 
-  const handleModelOverride = useCallback(
-    (modelId: string) => {
-      setActiveModel(modelId);
-      setActiveEngine("");
-      onModelChange(modelId);
-    },
-    [onModelChange],
-  );
-
-  const handleTTSOverride = useCallback(
-    (ttsId: string) => {
-      setActiveTTS(ttsId);
-      setActiveEngine("");
-      onTTSChange(ttsId);
-    },
-    [onTTSChange],
-  );
-
-  const handleVoiceOverride = useCallback(
+  const handleVoiceChange = useCallback(
     (voiceId: string) => {
       setActiveVoice(voiceId);
       onVoiceChange?.(voiceId);
@@ -197,64 +163,31 @@ export function EngineSelector({ onModelChange, onTTSChange, onEngineChange, onV
   const activeEngineData = engines.find((e) => e.id === activeEngine);
 
   return (
-    <div className="flex items-center gap-2 flex-wrap">
-      <div className="flex items-center gap-2">
+    <div className="flex items-center gap-2">
+      <select
+        value={activeEngine}
+        onChange={(e) => handleEngineChange(e.target.value)}
+        aria-label="Engine"
+        className="custom-select"
+      >
+        {engines.map((e) => (
+          <option key={e.id} value={e.id}>{e.label}</option>
+        ))}
+      </select>
+      {activeEngineData && (
+        <span className="text-[9px] tracking-wide text-ivory/25 hidden sm:inline">
+          {activeEngineData.description}
+        </span>
+      )}
+      {voices.length > 0 && (
         <select
-          value={activeEngine}
-          onChange={(e) => handleEngineChange(e.target.value)}
-          aria-label="Engine preset"
-          className="custom-select"
+          value={activeVoice}
+          onChange={(e) => handleVoiceChange(e.target.value)}
+          aria-label="Voice"
+          className="custom-select text-[11px]"
         >
-          {engines.map((e) => (
-            <option key={e.id} value={e.id}>{e.label}</option>
-          ))}
+          {voices.map((v) => <option key={v.id} value={v.id}>{v.name}</option>)}
         </select>
-        {activeEngineData && (
-          <span className="text-[9px] tracking-wide text-ivory/25 hidden sm:inline">
-            {activeEngineData.description}
-          </span>
-        )}
-        {voices.length > 0 && (
-          <select
-            value={activeVoice}
-            onChange={(e) => handleVoiceOverride(e.target.value)}
-            aria-label="Voice"
-            className="custom-select text-[11px]"
-          >
-            {voices.map((v) => <option key={v.id} value={v.id}>{v.name}</option>)}
-          </select>
-        )}
-        <button
-          type="button"
-          onClick={() => setShowAdvanced(!showAdvanced)}
-          className="p-1 rounded-md transition-colors duration-200 hover:bg-gold/5"
-          title="Advanced settings"
-          aria-label="Toggle advanced engine settings"
-          aria-expanded={showAdvanced}
-        >
-          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round"
-            className={showAdvanced ? "text-gold-muted" : "text-ivory/25"}
-          >
-            <circle cx="12" cy="12" r="3" />
-            <path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83-2.83l.06-.06A1.65 1.65 0 0 0 4.68 15a1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 2.83-2.83l.06.06A1.65 1.65 0 0 0 9 4.68a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 2.83l-.06.06A1.65 1.65 0 0 0 19.4 9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z" />
-          </svg>
-        </button>
-      </div>
-      {showAdvanced && (
-        <div className="flex items-center gap-1.5">
-          <select value={activeModel} onChange={(e) => handleModelOverride(e.target.value)}
-            aria-label="LLM model"
-            className="custom-select text-[11px]"
-          >
-            {models.map((m) => <option key={m.id} value={m.id}>{m.name}</option>)}
-          </select>
-          <select value={activeTTS} onChange={(e) => handleTTSOverride(e.target.value)}
-            aria-label="TTS provider"
-            className="custom-select text-[11px]"
-          >
-            {ttsProviders.map((p) => <option key={p.id} value={p.id}>{p.name}</option>)}
-          </select>
-        </div>
       )}
     </div>
   );
