@@ -65,7 +65,7 @@ async def lifespan(_app: FastAPI):
 app = FastAPI(title="Voice Agent API", lifespan=lifespan)
 
 app.add_middleware(SecurityHeadersMiddleware)
-app.add_middleware(RateLimitMiddleware)
+app.add_middleware(RateLimitMiddleware, trust_proxy_headers=settings.trust_proxy_headers)
 app.add_middleware(
     CORSMiddleware,
     allow_origins=settings.cors_origins.split(","),
