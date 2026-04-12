@@ -96,8 +96,9 @@ export function EngineSelector({ onEngineChange, onVoiceChange, serverConfig }: 
         setActiveEngine(match.id);
         setActiveTTS(match.ttsId || "");
       } else {
-        setActiveEngine(engines[0]?.id || "");
-        setActiveTTS(serverConfig.tts_provider);
+        const fallback = engines[0];
+        setActiveEngine(fallback?.id || "");
+        setActiveTTS(fallback?.ttsId || "");
       }
       setSynced(true);
     }
