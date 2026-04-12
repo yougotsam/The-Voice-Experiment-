@@ -80,6 +80,10 @@ def _create_tts():
 
 @router.websocket("/ws")
 async def websocket_endpoint(ws: WebSocket) -> None:
+    if ws_manager.at_capacity:
+        await ws.close(code=1013, reason="Server at capacity")
+        return
+
     await ws.accept()
     session_id = str(uuid.uuid4())
     logger.info("WS connected: %s", session_id)
@@ -137,8 +141,12 @@ async def websocket_endpoint(ws: WebSocket) -> None:
                 while True:
                     await asyncio.sleep(25)
                     await ws.send_text(encode_message(ServerMessageType.PING, {}))
-            except (WebSocketDisconnect, Exception):
+            except WebSocketDisconnect:
                 return
+            except asyncio.CancelledError:
+                raise
+            except Exception:
+                logger.warning("Ping loop error for %s", session_id, exc_info=True)
 
         ws_manager.register(session_id, send_json)
         ping_task = asyncio.create_task(_ping_loop())

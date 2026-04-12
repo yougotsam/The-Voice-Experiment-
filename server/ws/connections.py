@@ -7,10 +7,16 @@ logger = logging.getLogger(__name__)
 
 SendFn = Callable[[str, dict[str, Any]], Awaitable[None]]
 
+MAX_CONNECTIONS = 100
+
 
 class ConnectionManager:
     def __init__(self) -> None:
         self._connections: dict[str, SendFn] = {}
+
+    @property
+    def at_capacity(self) -> bool:
+        return len(self._connections) >= MAX_CONNECTIONS
 
     def register(self, session_id: str, send_fn: SendFn) -> None:
         self._connections[session_id] = send_fn
