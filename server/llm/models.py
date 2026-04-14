@@ -71,6 +71,15 @@ _register(
         api_key_setting="xai_api_key",
     ),
     ModelConfig(
+        id="xai-grok-4",
+        name="Grok 4 Reasoning",
+        provider="xai",
+        model="grok-4.20-reasoning",
+        base_url="https://api.x.ai/v1",
+        api_key_setting="xai_api_key",
+        max_tokens=16384,
+    ),
+    ModelConfig(
         id=f"ollama-{settings.ollama_model}",
         name=f"{settings.ollama_model.split(':')[0].capitalize()} Local",
         provider="ollama",

@@ -35,6 +35,7 @@ from server.tools.ghl import (
     GHLSendSMS,
 )
 from server.tools.imagine import GrokImagine
+from server.tools.firecrawl import FirecrawlSearch, FirecrawlScrape
 
 logger = logging.getLogger(__name__)
 router = APIRouter()
@@ -114,6 +115,10 @@ async def websocket_endpoint(ws: WebSocket) -> None:
         if settings.xai_api_key:
             tool_registry.register(GrokImagine())
             logger.info("Grok Imagine tool enabled for session %s", session_id)
+        if settings.firecrawl_api_key:
+            tool_registry.register(FirecrawlSearch())
+            tool_registry.register(FirecrawlScrape())
+            logger.info("FireCrawl tools enabled for session %s", session_id)
         if settings.ghl_api_key and settings.ghl_location_id:
             tool_registry.register(GHLContactSearch())
             tool_registry.register(GHLCreateContact())

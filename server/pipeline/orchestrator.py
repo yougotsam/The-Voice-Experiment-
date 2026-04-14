@@ -262,72 +262,94 @@ class Orchestrator:
             if self._metrics:
                 self._metrics.record_agent(agent.id)
 
+            agent_model_switched = False
+            if agent.model_id and agent.model_id != "default":
+                agent_model_cfg = MODEL_REGISTRY.get(agent.model_id)
+                if agent_model_cfg:
+                    agent_api_key = getattr(settings, agent_model_cfg.api_key_setting, "")
+                    if agent_api_key:
+                        self._save_primary_llm()
+                        self._llm.set_model(agent_model_cfg.model, agent_model_cfg.base_url, agent_api_key)
+                        agent_model_switched = True
+                        logger.info("Agent '%s' using model %s", agent.id, agent_model_cfg.name)
+
+            resolved_max_tokens = 1024
+            for cfg in MODEL_REGISTRY.values():
+                if cfg.model == self._llm.model:
+                    resolved_max_tokens = cfg.max_tokens
+                    break
+
             tools = active_tools.get_schemas() if active_tools and len(active_tools) > 0 else None
             system_prompt = self._build_system_prompt(tools, agent.system_prompt_addon + integration_notice)
 
             llm_measured = False
             tts_measured = False
 
-            for _round in range(MAX_TOOL_ROUNDS + 1):
-                full_response = ""
-                tool_calls_result = None
-                buffer = ""
-                first_llm_token = True
+            try:
+                for _round in range(MAX_TOOL_ROUNDS + 1):
+                    full_response = ""
+                    tool_calls_result = None
+                    buffer = ""
+                    first_llm_token = True
 
-                async for token in self._llm.stream_chat(
-                    self._session.get_messages(),
-                    system_prompt=system_prompt,
-                    tools=tools,
-                ):
-                    if isinstance(token, dict):
-                        tool_calls_result = token.get("tool_calls")
-                        continue
+                    async for token in self._llm.stream_chat(
+                        self._session.get_messages(),
+                        system_prompt=system_prompt,
+                        tools=tools,
+                        max_tokens=resolved_max_tokens,
+                    ):
+                        if isinstance(token, dict):
+                            tool_calls_result = token.get("tool_calls")
+                            continue
 
-                    if first_llm_token:
-                        if not llm_measured:
-                            llm_ttfb = time.perf_counter() - t_start
-                            llm_measured = True
-                        first_llm_token = False
+                        if first_llm_token:
+                            if not llm_measured:
+                                llm_ttfb = time.perf_counter() - t_start
+                                llm_measured = True
+                            first_llm_token = False
 
-                    full_response += token
-                    buffer += token
+                        full_response += token
+                        buffer += token
 
-                    sentences = SENTENCE_END.split(buffer)
-                    if len(sentences) > 1:
-                        for sentence in sentences[:-1]:
-                            sentence = sentence.strip()
-                            if sentence:
-                                await self._send_json("agent.text", {"text": sentence})
-                                t_before_tts = time.perf_counter()
-                                await self._synthesize_and_send(sentence)
-                                if not tts_measured:
-                                    tts_ttfb = time.perf_counter() - t_before_tts
-                                    tts_measured = True
-                        buffer = sentences[-1]
+                        sentences = SENTENCE_END.split(buffer)
+                        if len(sentences) > 1:
+                            for sentence in sentences[:-1]:
+                                sentence = sentence.strip()
+                                if sentence:
+                                    await self._send_json("agent.text", {"text": sentence})
+                                    t_before_tts = time.perf_counter()
+                                    await self._synthesize_and_send(sentence)
+                                    if not tts_measured:
+                                        tts_ttfb = time.perf_counter() - t_before_tts
+                                        tts_measured = True
+                            buffer = sentences[-1]
 
-                if buffer.strip():
-                    await self._send_json("agent.text", {"text": buffer.strip()})
-                    t_before_tts = time.perf_counter()
-                    await self._synthesize_and_send(buffer.strip())
-                    if not tts_measured:
-                        tts_ttfb = time.perf_counter() - t_before_tts
-                        tts_measured = True
+                    if buffer.strip():
+                        await self._send_json("agent.text", {"text": buffer.strip()})
+                        t_before_tts = time.perf_counter()
+                        await self._synthesize_and_send(buffer.strip())
+                        if not tts_measured:
+                            tts_ttfb = time.perf_counter() - t_before_tts
+                            tts_measured = True
 
-                if not tool_calls_result:
-                    self._session.add_assistant_message(full_response)
-                    break
+                    if not tool_calls_result:
+                        self._session.add_assistant_message(full_response)
+                        break
 
-                self._session.add_assistant_tool_calls(full_response, tool_calls_result)
-                await self._execute_tool_calls(tool_calls_result, active_tools)
-            else:
-                logger.warning("Tool loop exhausted after %d rounds", MAX_TOOL_ROUNDS)
-                self._session.add_assistant_message(
-                    full_response or "I ran into a limit processing that request. Let me know if you'd like me to try again."
-                )
-                if not full_response:
-                    await self._send_json("agent.text", {
-                        "text": "I ran into a limit processing that request. Let me know if you'd like me to try again.",
-                    })
+                    self._session.add_assistant_tool_calls(full_response, tool_calls_result)
+                    await self._execute_tool_calls(tool_calls_result, active_tools)
+                else:
+                    logger.warning("Tool loop exhausted after %d rounds", MAX_TOOL_ROUNDS)
+                    self._session.add_assistant_message(
+                        full_response or "I ran into a limit processing that request. Let me know if you'd like me to try again."
+                    )
+                    if not full_response:
+                        await self._send_json("agent.text", {
+                            "text": "I ran into a limit processing that request. Let me know if you'd like me to try again.",
+                        })
+            finally:
+                if agent_model_switched:
+                    self._restore_primary_llm()
 
             total = time.perf_counter() - t_start
             llm_ms = round(llm_ttfb * 1000)
@@ -434,6 +456,12 @@ class Orchestrator:
             return f"Found {total} conversation{'s' if total != 1 else ''}"
         if name == "generate_image":
             return f"Image generated: {result.get('prompt', '')[:80]}"
+        if name == "web_search":
+            total = result.get("total", 0)
+            return f"Found {total} result{'s' if total != 1 else ''} for \"{result.get('query', '')}\""
+        if name == "scrape_page":
+            title = result.get("title", "page")
+            return f"Scraped: {title[:80]}"
         try:
             return json.dumps(result)[:200]
         except (TypeError, ValueError):

@@ -31,6 +31,7 @@ def _log_config():
         "xAI / Grok": bool(settings.xai_api_key),
         "ElevenLabs": bool(settings.elevenlabs_api_key),
         "GHL CRM": bool(settings.ghl_api_key and settings.ghl_location_id),
+        "FireCrawl (Search)": bool(settings.firecrawl_api_key),
     }
     logger.info("=== ZeebsOS Configuration ===")
     for name, ok in keys.items():

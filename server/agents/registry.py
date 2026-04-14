@@ -74,6 +74,23 @@ _register(
         ],
     ),
     AgentConfig(
+        id="research",
+        name="Research Agent",
+        description="Searches the web, reads pages, and synthesizes findings using deep reasoning.",
+        system_prompt_addon=(
+            "You are a research specialist with access to web search and page scraping tools. "
+            "When the user asks a question requiring current information or deep research, "
+            "search the web first, then read relevant pages for details. Synthesize your "
+            "findings into a clear, well-organized spoken answer. Cite sources when possible. "
+            "Use multiple search queries if the first doesn't yield good results."
+        ),
+        tools=[
+            "web_search",
+            "scrape_page",
+        ],
+        model_id="xai-grok-4",
+    ),
+    AgentConfig(
         id="default",
         name="General Assistant",
         description="General conversation, strategy, and coaching. Has access to all tools.",
