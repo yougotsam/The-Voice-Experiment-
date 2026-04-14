@@ -89,10 +89,4 @@ class RedisMemory:
             logger.warning("Failed to get summary for %s", user_id, exc_info=True)
             return ""
 
-    async def clear(self, user_id: str) -> None:
-        if not self._redis:
-            return
-        try:
-            await self._redis.delete(self._key(user_id))
-        except Exception:
-            logger.warning("Failed to clear memory for %s", user_id, exc_info=True)
+

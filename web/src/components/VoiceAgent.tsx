@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useRef, useState, useEffect, useMemo, memo } from "react";
+import { useCallback, useRef, useState, useEffect, useMemo } from "react";
 import { useWebSocket, ServerMessage } from "@/hooks/useWebSocket";
 import { useMicrophone } from "@/hooks/useMicrophone";
 import { useAudioPlayback } from "@/hooks/useAudioPlayback";

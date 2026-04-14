@@ -51,7 +51,10 @@ class FirecrawlSearch(Tool):
         if not api_key:
             return {"error": "FireCrawl API key not configured"}
 
-        limit = max(1, min(int(kwargs.get("limit", 5)), 10))
+        try:
+            limit = max(1, min(int(kwargs.get("limit", 5)), 10))
+        except (ValueError, TypeError):
+            limit = 5
         headers = {
             "Authorization": f"Bearer {api_key}",
             "Content-Type": "application/json",
