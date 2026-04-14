@@ -48,6 +48,7 @@ class AgentRouter:
             async for token in llm.stream_chat(
                 [{"role": "user", "content": prompt}],
                 system_prompt="You are a classification assistant. Respond with only the category id.",
+                max_tokens=32,
             ):
                 if isinstance(token, str):
                     response += token
