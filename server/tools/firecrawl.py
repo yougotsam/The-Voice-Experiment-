@@ -51,7 +51,7 @@ class FirecrawlSearch(Tool):
         if not api_key:
             return {"error": "FireCrawl API key not configured"}
 
-        limit = min(kwargs.get("limit", 5), 10)
+        limit = max(1, min(int(kwargs.get("limit", 5)), 10))
         headers = {
             "Authorization": f"Bearer {api_key}",
             "Content-Type": "application/json",
@@ -86,9 +86,9 @@ class FirecrawlSearch(Tool):
                 }
         except httpx.TimeoutException:
             return {"error": "Web search timed out. Try a simpler query."}
-        except Exception as exc:
+        except Exception:
             logger.exception("FireCrawl search failed")
-            return {"error": f"Web search failed: {str(exc)[:100]}"}
+            return {"error": "Web search failed due to an unexpected error. Please try again."}
 
 
 class FirecrawlScrape(Tool):
@@ -154,6 +154,6 @@ class FirecrawlScrape(Tool):
                 }
         except httpx.TimeoutException:
             return {"error": "Page scraping timed out."}
-        except Exception as exc:
+        except Exception:
             logger.exception("FireCrawl scrape failed")
-            return {"error": f"Page scraping failed: {str(exc)[:100]}"}
+            return {"error": "Page scraping failed due to an unexpected error. Please try again."}
