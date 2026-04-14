@@ -9,4 +9,5 @@ class LLMProvider(ABC):
         messages: list[dict],
         system_prompt: str = "",
         tools: list[dict] | None = None,
+        max_tokens: int = 1024,
     ) -> AsyncIterator[str | dict[str, Any]]: ...

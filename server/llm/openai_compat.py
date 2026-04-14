@@ -46,6 +46,7 @@ class OpenAICompatLLM(LLMProvider):
         messages: list[dict],
         system_prompt: str = "",
         tools: list[dict] | None = None,
+        max_tokens: int = 1024,
     ) -> AsyncIterator[str | dict[str, Any]]:
         full_messages = []
         if system_prompt:
@@ -56,7 +57,7 @@ class OpenAICompatLLM(LLMProvider):
             model=self._model,
             messages=full_messages,
             stream=True,
-            max_tokens=1024,
+            max_tokens=max_tokens,
             temperature=0.7,
         )
         if tools:

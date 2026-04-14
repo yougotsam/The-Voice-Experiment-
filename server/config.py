@@ -25,6 +25,7 @@ class Settings(BaseSettings):
     ghl_api_key: str = ""
     ghl_location_id: str = ""
     ghl_webhook_secret: str = ""
+    firecrawl_api_key: str = ""
     redis_url: str = ""
     trust_proxy_headers: bool = False
     cors_origins: str = "http://localhost:3000"
