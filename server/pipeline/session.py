@@ -1,6 +1,5 @@
 import json
 import logging
-import time
 from typing import Any
 
 from server.personas import Persona, get_persona
@@ -18,7 +17,6 @@ class ConversationSession:
         self.history: list[dict[str, Any]] = []
         self.persona: Persona = get_persona("default")
         self.is_active = False
-        self.created_at = time.time()
         self._memory_summary: str = ""
 
     @property
@@ -27,9 +25,6 @@ class ConversationSession:
         if self._memory_summary:
             base += f"\n\nMEMORY FROM PREVIOUS SESSION:\n{self._memory_summary}"
         return base
-
-    def set_memory_summary(self, summary: str) -> None:
-        self._memory_summary = summary
 
     async def restore_from_memory(self, memory) -> None:
         if not memory or not memory.available:

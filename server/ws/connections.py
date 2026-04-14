@@ -36,9 +36,5 @@ class ConnectionManager:
                 logger.warning("Broadcast failed for session %s, removing", sid)
                 self._connections.pop(sid, None)
 
-    @property
-    def active_count(self) -> int:
-        return len(self._connections)
-
 
 manager = ConnectionManager()

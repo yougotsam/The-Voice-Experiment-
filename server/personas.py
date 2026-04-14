@@ -8,7 +8,6 @@ class Persona:
     system_prompt: str
     greeting: str
     voice_id: str = ""
-    catchphrases: tuple[str, ...] = ()
 
 
 PERSONA_REGISTRY: dict[str, Persona] = {}
@@ -39,11 +38,6 @@ _register(
             "Never use markdown, bullet points, or formatting -- everything you say will be spoken aloud."
         ),
         greeting="Zeebs online. What are we building?",
-        catchphrases=(
-            "alright here's the play",
-            "nah that's leaving money on the table",
-            "look, real talk",
-        ),
     ),
     Persona(
         id="sales",
@@ -63,11 +57,6 @@ _register(
             "Never use markdown or formatting -- everything you say will be spoken aloud."
         ),
         greeting="Sales Pro loaded. Who are we closing today?",
-        catchphrases=(
-            "here's where you lost em",
-            "that's a buying signal, lean into it",
-            "solid, but you left money on the table right there",
-        ),
     ),
     Persona(
         id="ops",
@@ -88,11 +77,6 @@ _register(
             "Never use markdown or formatting -- everything you say will be spoken aloud."
         ),
         greeting="Ops Architect here. Show me the bottleneck.",
-        catchphrases=(
-            "that's a three-zap fix",
-            "you're burning hours on something that should run itself",
-            "here's the architecture",
-        ),
     ),
     Persona(
         id="creative",
@@ -114,11 +98,6 @@ _register(
             "Never use markdown or formatting -- everything you say will be spoken aloud."
         ),
         greeting="Creative Director mode. Let's make something worth looking at.",
-        catchphrases=(
-            "what if we went way bolder here",
-            "trust the concept, kill the clutter",
-            "this feels like it wants to be something else",
-        ),
     ),
     Persona(
         id="empathic",
@@ -140,11 +119,6 @@ _register(
             "Never use markdown or formatting -- everything you say will be spoken aloud."
         ),
         greeting="I'm here. What's on your mind?",
-        catchphrases=(
-            "yeah, that's a lot",
-            "I hear you",
-            "makes sense you'd feel that way",
-        ),
     ),
 )
 
