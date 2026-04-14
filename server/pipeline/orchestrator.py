@@ -285,70 +285,71 @@ class Orchestrator:
             llm_measured = False
             tts_measured = False
 
-            for _round in range(MAX_TOOL_ROUNDS + 1):
-                full_response = ""
-                tool_calls_result = None
-                buffer = ""
-                first_llm_token = True
+            try:
+                for _round in range(MAX_TOOL_ROUNDS + 1):
+                    full_response = ""
+                    tool_calls_result = None
+                    buffer = ""
+                    first_llm_token = True
 
-                async for token in self._llm.stream_chat(
-                    self._session.get_messages(),
-                    system_prompt=system_prompt,
-                    tools=tools,
-                    max_tokens=resolved_max_tokens,
-                ):
-                    if isinstance(token, dict):
-                        tool_calls_result = token.get("tool_calls")
-                        continue
+                    async for token in self._llm.stream_chat(
+                        self._session.get_messages(),
+                        system_prompt=system_prompt,
+                        tools=tools,
+                        max_tokens=resolved_max_tokens,
+                    ):
+                        if isinstance(token, dict):
+                            tool_calls_result = token.get("tool_calls")
+                            continue
 
-                    if first_llm_token:
-                        if not llm_measured:
-                            llm_ttfb = time.perf_counter() - t_start
-                            llm_measured = True
-                        first_llm_token = False
+                        if first_llm_token:
+                            if not llm_measured:
+                                llm_ttfb = time.perf_counter() - t_start
+                                llm_measured = True
+                            first_llm_token = False
 
-                    full_response += token
-                    buffer += token
+                        full_response += token
+                        buffer += token
 
-                    sentences = SENTENCE_END.split(buffer)
-                    if len(sentences) > 1:
-                        for sentence in sentences[:-1]:
-                            sentence = sentence.strip()
-                            if sentence:
-                                await self._send_json("agent.text", {"text": sentence})
-                                t_before_tts = time.perf_counter()
-                                await self._synthesize_and_send(sentence)
-                                if not tts_measured:
-                                    tts_ttfb = time.perf_counter() - t_before_tts
-                                    tts_measured = True
-                        buffer = sentences[-1]
+                        sentences = SENTENCE_END.split(buffer)
+                        if len(sentences) > 1:
+                            for sentence in sentences[:-1]:
+                                sentence = sentence.strip()
+                                if sentence:
+                                    await self._send_json("agent.text", {"text": sentence})
+                                    t_before_tts = time.perf_counter()
+                                    await self._synthesize_and_send(sentence)
+                                    if not tts_measured:
+                                        tts_ttfb = time.perf_counter() - t_before_tts
+                                        tts_measured = True
+                            buffer = sentences[-1]
 
-                if buffer.strip():
-                    await self._send_json("agent.text", {"text": buffer.strip()})
-                    t_before_tts = time.perf_counter()
-                    await self._synthesize_and_send(buffer.strip())
-                    if not tts_measured:
-                        tts_ttfb = time.perf_counter() - t_before_tts
-                        tts_measured = True
+                    if buffer.strip():
+                        await self._send_json("agent.text", {"text": buffer.strip()})
+                        t_before_tts = time.perf_counter()
+                        await self._synthesize_and_send(buffer.strip())
+                        if not tts_measured:
+                            tts_ttfb = time.perf_counter() - t_before_tts
+                            tts_measured = True
 
-                if not tool_calls_result:
-                    self._session.add_assistant_message(full_response)
-                    break
+                    if not tool_calls_result:
+                        self._session.add_assistant_message(full_response)
+                        break
 
-                self._session.add_assistant_tool_calls(full_response, tool_calls_result)
-                await self._execute_tool_calls(tool_calls_result, active_tools)
-            else:
-                logger.warning("Tool loop exhausted after %d rounds", MAX_TOOL_ROUNDS)
-                self._session.add_assistant_message(
-                    full_response or "I ran into a limit processing that request. Let me know if you'd like me to try again."
-                )
-                if not full_response:
-                    await self._send_json("agent.text", {
-                        "text": "I ran into a limit processing that request. Let me know if you'd like me to try again.",
-                    })
-
-            if agent_model_switched:
-                self._restore_primary_llm()
+                    self._session.add_assistant_tool_calls(full_response, tool_calls_result)
+                    await self._execute_tool_calls(tool_calls_result, active_tools)
+                else:
+                    logger.warning("Tool loop exhausted after %d rounds", MAX_TOOL_ROUNDS)
+                    self._session.add_assistant_message(
+                        full_response or "I ran into a limit processing that request. Let me know if you'd like me to try again."
+                    )
+                    if not full_response:
+                        await self._send_json("agent.text", {
+                            "text": "I ran into a limit processing that request. Let me know if you'd like me to try again.",
+                        })
+            finally:
+                if agent_model_switched:
+                    self._restore_primary_llm()
 
             total = time.perf_counter() - t_start
             llm_ms = round(llm_ttfb * 1000)
